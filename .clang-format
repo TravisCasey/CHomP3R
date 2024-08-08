@@ -1,0 +1,12 @@
+---
+BasedOnStyle: LLVM
+---
+Language: Cpp
+AccessModifierOffset: -4
+AlignEscapedNewlines: Left
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
+AlwaysBreakTemplateDeclarations: true
+IndentPPDirectives: AfterHash
+IndentWidth: 4
+PointerAlignment: Left
