@@ -73,7 +73,7 @@ R one() {
  *
  * @tparam p Integer p > 1.
  */
-template <int p>
+template <unsigned int p>
 class Z {
 public:
     /**
@@ -181,14 +181,20 @@ public:
     }
 
 private:
-    int value;
-    int mod(int n) {
-        if (n >= 0) {
-            return n - (n / p) * p;
-        }
-        return n - (n / p) * p + p;
-    }
+    unsigned int value;
+    unsigned int mod(int n);
 };
+
+template <unsigned int p>
+unsigned int Z<p>::mod(int n) {
+    int modulus = n % static_cast<int>(p);
+    return modulus >= 0 ? modulus : modulus + p;
+}
+
+template <>
+inline unsigned int Z<2u>::mod(int n) {
+    return (n & 1) == 1;
+}
 
 } // namespace chomp::modules
 

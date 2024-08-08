@@ -55,6 +55,9 @@ TEST_CASE("Integral coversion of Z works correctly", "[rings]") {
     CHECK(int(Z<12>(-2)) == 10);
     CHECK(zero<Z<24>>() == Z<24>(0));
     CHECK(one<Z<3>>() == Z<3>(1));
+
+    CHECK(int(Z<2>(-455)) == 1);
+    CHECK(int(Z<2>(44)) == 0);
 }
 
 } // namespace chomp::modules
