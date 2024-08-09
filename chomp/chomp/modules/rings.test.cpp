@@ -4,8 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
-
 #include <catch2/catch_test_macros.hpp>
 
 #include <chomp/modules/rings.hpp>
@@ -61,5 +59,3 @@ TEST_CASE("Integral coversion of Z works correctly", "[rings]") {
 }
 
 } // namespace chomp::modules
-
-// NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
