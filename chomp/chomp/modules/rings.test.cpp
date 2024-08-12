@@ -29,6 +29,10 @@ TEST_CASE("Z fulfills Ring requirement", "[rings]") {
     CHECK(Ring<Z<6>>);
 }
 
+TEST_CASE("Construction of Z with negative values", "[rings]") {
+    CHECK(int(Z<14>(-31)) == 11);
+}
+
 TEST_CASE("Comparison operators of Z work correctly", "[rings]") {
     CHECK(Z<2>(3) == Z<2>(-1));
     CHECK(Z<7>(3) != Z<7>(-1));

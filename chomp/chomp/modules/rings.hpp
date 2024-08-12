@@ -14,6 +14,7 @@
 #define RINGS_H
 
 #include <concepts>
+#include <limits>
 
 namespace chomp::modules {
 
@@ -69,7 +70,7 @@ R one() {
  * prime.
  *
  * Defines arithmetic operators in a straightforward way along with a conversion
- * to and from int. Internally, the value is stored as a unsigned int, and is
+ * to and from int. Internally, the value is stored as an int, and is
  * only taken modulo p for the purposes of equality tests and conversion to int.
  *
  * @tparam p Integer p > 1.
@@ -182,18 +183,18 @@ public:
     }
 
 private:
-    unsigned int value;
-    [[nodiscard]] constexpr unsigned int mod(int n) const noexcept;
+    int value;
+    [[nodiscard]] constexpr int mod(int n) const noexcept;
 };
 
 template <unsigned int p>
-inline constexpr unsigned int Z<p>::mod(int n) const noexcept {
+inline constexpr int Z<p>::mod(int n) const noexcept {
     int modulus = n % static_cast<int>(p);
     return modulus >= 0 ? modulus : modulus + p;
 }
 
 template <>
-inline constexpr unsigned int Z<2u>::mod(int n) const noexcept {
+inline constexpr int Z<2u>::mod(int n) const noexcept {
     return (n & 1) == 1;
 }
 
