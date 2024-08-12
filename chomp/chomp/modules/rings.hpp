@@ -69,7 +69,8 @@ R one() {
  * prime.
  *
  * Defines arithmetic operators in a straightforward way along with a conversion
- * to and from int.
+ * to and from int. Internally, the value is stored as a unsigned int, and is
+ * only taken modulo p for the purposes of equality tests and conversion to int.
  *
  * @tparam p Integer p > 1.
  */
@@ -81,7 +82,7 @@ public:
      *
      * @param n
      */
-    Z(int n) : value(mod(n)) {}
+    constexpr Z(int n) noexcept : value(n) {}
 
     /**
      * @brief (Explicit) conversion to int using value of n modulo p.
@@ -90,8 +91,8 @@ public:
      *
      * @return int
      */
-    explicit operator int() {
-        return value;
+    [[nodiscard]] explicit operator int() const noexcept {
+        return mod(value);
     }
 
     /**
@@ -99,7 +100,7 @@ public:
      *
      * @return Z
      */
-    Z operator-() const {
+    [[nodiscard]] constexpr Z operator-() const noexcept {
         return Z(-value);
     }
     /**
@@ -108,7 +109,7 @@ public:
      * @param n
      * @return Z
      */
-    Z operator+(const Z& n) const {
+    [[nodiscard]] constexpr Z operator+(const Z& n) const noexcept {
         return Z(value + n.value);
     }
     /**
@@ -117,7 +118,7 @@ public:
      * @param n
      * @return Z
      */
-    Z operator-(const Z& n) const {
+    [[nodiscard]] constexpr Z operator-(const Z& n) const noexcept {
         return Z(value - n.value);
     }
     /**
@@ -126,7 +127,7 @@ public:
      * @param n
      * @return Z
      */
-    Z operator*(const Z& n) const {
+    [[nodiscard]] constexpr Z operator*(const Z& n) const noexcept {
         return Z(value * n.value);
     }
     /**
@@ -136,8 +137,8 @@ public:
      * @return true If the Z instances are equivalent.
      * @return false Otherwise.
      */
-    bool operator==(const Z& n) const {
-        return value == n.value;
+    [[nodiscard]] constexpr bool operator==(const Z& n) const noexcept {
+        return (mod(value - n.value) == 0);
     }
     /**
      * @brief Inequality modulo p.
@@ -146,8 +147,8 @@ public:
      * @return true If the Z instances are not equivalent.
      * @return false Otherwise.
      */
-    bool operator!=(const Z& n) const {
-        return value != n.value;
+    [[nodiscard]] constexpr bool operator!=(const Z& n) const noexcept {
+        return (mod(value - n.value) != 0);
     }
     /**
      * @brief Updating sum modulo p.
@@ -155,8 +156,8 @@ public:
      * @param n
      * @return Z&
      */
-    Z& operator+=(const Z& n) {
-        value = mod(value + n.value);
+    constexpr Z& operator+=(const Z& n) noexcept {
+        value += n.value;
         return *this;
     }
     /**
@@ -165,8 +166,8 @@ public:
      * @param n
      * @return Z&
      */
-    Z& operator-=(const Z& n) {
-        value = mod(value - n.value);
+    constexpr Z& operator-=(const Z& n) noexcept {
+        value -= n.value;
         return *this;
     }
     /**
@@ -175,24 +176,24 @@ public:
      * @param n
      * @return Z&
      */
-    Z& operator*=(const Z& n) {
-        value = mod(value * n.value);
+    constexpr Z& operator*=(const Z& n) noexcept {
+        value *= n.value;
         return *this;
     }
 
 private:
     unsigned int value;
-    unsigned int mod(int n);
+    [[nodiscard]] constexpr unsigned int mod(int n) const noexcept;
 };
 
 template <unsigned int p>
-unsigned int Z<p>::mod(int n) {
+inline constexpr unsigned int Z<p>::mod(int n) const noexcept {
     int modulus = n % static_cast<int>(p);
     return modulus >= 0 ? modulus : modulus + p;
 }
 
 template <>
-inline unsigned int Z<2u>::mod(int n) {
+inline constexpr unsigned int Z<2u>::mod(int n) const noexcept {
     return (n & 1) == 1;
 }
 
