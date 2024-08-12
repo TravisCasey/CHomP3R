@@ -31,12 +31,12 @@ template <typename R>
 concept Ring = requires(R a, R b) {
     static_cast<R>(0);
     static_cast<R>(1);
-    { -a } -> std::same_as<R>;
-    { a + b } -> std::same_as<R>;
-    { a - b } -> std::same_as<R>;
-    { a* b } -> std::same_as<R>;
-    { a == b } -> std::same_as<bool>;
-    { a != b } -> std::same_as<bool>;
+    { -a } -> std::convertible_to<R>;
+    { a + b } -> std::convertible_to<R>;
+    { a - b } -> std::convertible_to<R>;
+    { a* b } -> std::convertible_to<R>;
+    { a == b } -> std::convertible_to<bool>;
+    { a != b } -> std::convertible_to<bool>;
     a += b;
     a -= b;
     a *= b;

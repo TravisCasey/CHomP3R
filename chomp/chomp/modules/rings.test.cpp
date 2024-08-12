@@ -14,7 +14,7 @@ TEST_CASE("Fundamental numerical types fulfill Ring requirement", "[rings]") {
     CHECK(Ring<int>);
     CHECK(Ring<float>);
     CHECK_FALSE(Ring<void>);
-    CHECK_FALSE(Ring<char>);
+    CHECK(Ring<char>);
 }
 
 TEST_CASE("Identity functions on fundamental types output correctly, [rings]") {
