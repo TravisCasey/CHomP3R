@@ -44,6 +44,19 @@ concept Ring = requires(R a, R b) {
 };
 
 /**
+ * @brief Classes implementing this concept represent the ring (field) with two
+ * elements.
+ *
+ * While there is only one such ring, there may be different @c Z data
+ * structures implementing it due to the @c T template argument.
+ *
+ * @tparam R The proposed class implementing a two-element ring.
+ */
+template <typename R>
+concept BinaryRing = Ring<R> && R::get_p()
+== 2;
+
+/**
  * @brief Return the additive identity of the ring R.
  *
  * @tparam R The ring type.

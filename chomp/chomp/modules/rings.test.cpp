@@ -17,6 +17,12 @@ TEST_CASE("Fundamental numerical types fulfill Ring requirement", "[rings]") {
     CHECK(Ring<char>);
 }
 
+TEST_CASE("BinaryRing concept", "[rings]") {
+    CHECK(BinaryRing<Z<unsigned int, 2>>);
+    CHECK_FALSE(BinaryRing<Z<unsigned int, 3>>);
+    CHECK_FALSE(BinaryRing<int>);
+}
+
 TEST_CASE("Identity functions on fundamental types output correctly, [rings]") {
     CHECK(zero<int>() == 0);
     CHECK(zero<float>() == 0.0);
