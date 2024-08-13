@@ -66,137 +66,152 @@ R one() {
 }
 
 /**
- * @brief The ring of integers modulo p. Defines a field if and only if p is
- * prime.
+ * @brief The ring of (unsigned) integers (of type @c T) modulo @c p.
  *
- * Defines arithmetic operators in a straightforward way along with a conversion
- * to and from int. Internally, the value is stored as an int, and is
- * only taken modulo p for the purposes of equality tests and conversion to int.
+ * Defines standard arithmetic and equality operators along with an accessor
+ * method for the modular value. Overflow is prevented by requiring that the
+ * the modulo value @c p satisfies @c p squared is less than the maximum value
+ * that can be represented by @c T.
  *
- * @tparam p Integer p > 1.
+ * @tparam T Unsigned integral type
+ * @tparam p Modulo value; required p > 2 and p * p < max value of T.
  */
-template <unsigned int p>
-class Z {
+template <typename T, T p>
+requires(std::unsigned_integral<T>&& p > static_cast<T>(1) &&
+         p < std::numeric_limits<T>::max() / p) class Z {
 public:
+    /**
+     * @brief Underlying unsigned integral type.
+     *
+     */
+    using value_type = T;
+
     /**
      * @brief Construct a new Z object with value n modulo p.
      *
      * @param n
      */
-    constexpr Z(int n) noexcept : value(n) {}
+    constexpr Z(T n) : value(n % p) {}
 
     /**
-     * @brief (Explicit) conversion to int using value of n modulo p.
+     * @brief Return value in range [0, p-1]
      *
-     * Output range is [0, p-1).
-     *
-     * @return int
+     * @return T
      */
-    [[nodiscard]] explicit operator int() const noexcept {
-        return mod(value);
+    [[nodiscard]] constexpr T get_value() const noexcept {
+        return value;
+    }
+    /**
+     * @brief Get the modulo value p.
+     *
+     * @return T
+     */
+    [[nodiscard]] static constexpr T get_p() noexcept {
+        return p;
     }
 
     /**
-     * @brief Negative modulo p.
+     * @brief Negative operator modulo p.
      *
      * @return Z
      */
     [[nodiscard]] constexpr Z operator-() const noexcept {
-        return Z(-value);
+        return Z(p - value); // safe as value in [0, p-1]
     }
     /**
-     * @brief Sum modulo p.
+     * @brief Sum operator modulo p.
      *
-     * @param n
+     * @param rhs
      * @return Z
      */
-    [[nodiscard]] constexpr Z operator+(const Z& n) const noexcept {
-        return Z(value + n.value);
+    [[nodiscard]] constexpr Z operator+(const Z& rhs) const noexcept {
+        T sum = value + rhs.value; // safe as p < sqrt(max value of T)
+        return Z(sum >= p ? sum - p : sum);
     }
     /**
-     * @brief Difference modulo p.
+     * @brief Difference operator modulo p.
      *
-     * @param n
+     * @param rhs
      * @return Z
      */
-    [[nodiscard]] constexpr Z operator-(const Z& n) const noexcept {
-        return Z(value - n.value);
+    [[nodiscard]] constexpr Z operator-(const Z& rhs) const noexcept {
+        T sum = value + (p - rhs.value); // safe; see - and + operators
+        return Z(sum >= p ? sum - p : sum);
     }
     /**
-     * @brief Multiplication modulo p.
+     * @brief Multiplication operator modulo p.
      *
-     * @param n
+     * @param rhs
      * @return Z
      */
-    [[nodiscard]] constexpr Z operator*(const Z& n) const noexcept {
-        return Z(value * n.value);
+    [[nodiscard]] constexpr Z operator*(const Z& rhs) const noexcept {
+        T prod = value * rhs.value; // safe as p < sqrt(max value of T)
+        return Z(prod);
     }
+
     /**
-     * @brief Equality modulo p.
+     * @brief Equality operator modulo p.
      *
-     * @param n
-     * @return true If the Z instances are equivalent.
+     * @param rhs
+     * @return true If the Z instances are equivalent modulo p.
      * @return false Otherwise.
      */
-    [[nodiscard]] constexpr bool operator==(const Z& n) const noexcept {
-        return (mod(value - n.value) == 0);
+    [[nodiscard]] constexpr bool operator==(const Z& rhs) const noexcept {
+        T sum = value + (p - rhs.value); // safe; see - and + operators;
+        return sum == p;
     }
     /**
-     * @brief Inequality modulo p.
+     * @brief Inequality operator modulo p.
      *
-     * @param n
-     * @return true If the Z instances are not equivalent.
+     * @param rhs
+     * @return true If the Z instances are not equivalent modulo p.
      * @return false Otherwise.
      */
-    [[nodiscard]] constexpr bool operator!=(const Z& n) const noexcept {
-        return (mod(value - n.value) != 0);
+    [[nodiscard]] constexpr bool operator!=(const Z& rhs) const noexcept {
+        T sum = value + (p - rhs.value); // safe; see - and + operators;
+        return sum != p;
     }
+
     /**
-     * @brief Updating sum modulo p.
+     * @brief Updating sum operator modulo p.
      *
-     * @param n
+     * @param rhs
      * @return Z&
      */
-    constexpr Z& operator+=(const Z& n) noexcept {
-        value += n.value;
+    constexpr Z& operator+=(const Z& rhs) noexcept {
+        value += rhs.value; // safe; see + operator
+        if (value >= p) {
+            value -= p;
+        }
         return *this;
     }
     /**
-     * @brief Updating subtraction modulo p.
+     * @brief Updating subtraction operator modulo p.
      *
-     * @param n
+     * @param rhs
      * @return Z&
      */
-    constexpr Z& operator-=(const Z& n) noexcept {
-        value -= n.value;
+    constexpr Z& operator-=(const Z& rhs) noexcept {
+        value += (p - rhs.value); // safe; see + and - operators
+        if (value >= p) {
+            value -= p;
+        }
         return *this;
     }
     /**
-     * @brief Updating multiplication modulo p.
+     * @brief Updating multiplication operator modulo p.
      *
-     * @param n
+     * @param rhs
      * @return Z&
      */
-    constexpr Z& operator*=(const Z& n) noexcept {
-        value *= n.value;
+    constexpr Z& operator*=(const Z& rhs) noexcept {
+        value = (value * rhs.value) % p; // safe; see * operator
         return *this;
     }
 
 private:
-    int value;
-    [[nodiscard]] constexpr int mod(int n) const noexcept;
+    T value;
 };
-
-template <unsigned int p>
-inline constexpr int Z<p>::mod(int n) const noexcept {
-    int modulus = n % static_cast<int>(p);
-    return modulus >= 0 ? modulus : modulus + p;
-}
-
-template <>
-inline constexpr int Z<2u>::mod(int n) const noexcept {
-    return (n & 1) == 1;
-}
 
 } // namespace chomp::modules
 
