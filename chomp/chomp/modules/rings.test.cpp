@@ -4,16 +4,19 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#include <string>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <chomp/modules/rings.hpp>
 
 namespace chomp::modules {
 
-TEST_CASE("Fundamental numerical types fulfill Ring requirement", "[rings]") {
+TEST_CASE("Fundamental types and Group/Ring concept", "[rings]") {
+    CHECK_FALSE(Group<std::string>);
     CHECK(Ring<int>);
     CHECK(Ring<float>);
-    CHECK_FALSE(Ring<void>);
+    CHECK_FALSE(Group<void>);
     CHECK(Ring<char>);
 }
 

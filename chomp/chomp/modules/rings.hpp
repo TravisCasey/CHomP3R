@@ -19,27 +19,53 @@
 namespace chomp::modules {
 
 /**
- * @brief The minimal requirements for a class to be considered a Ring.
+ * @brief Return the additive identity of the group G.
  *
- * We require certain arithmetic operations, equality operators, and casting of
- * 0 and 1 to the additive and multiplicative identities, respectively.
+ * @tparam R The ring type.
+ * @return R
+ */
+template <typename G>
+constexpr G zero() {
+    return static_cast<G>(0);
+}
+
+/**
+ * @brief Return the multiplicative identity of the ring R.
  *
- * Note that the standard numerical types fulfill this requirement.
- *
- * @tparam R The proposed class implementing a ring.
+ * @tparam R The ring type.
+ * @return R
  */
 template <typename R>
-concept Ring = requires(R a, R b) {
-    static_cast<R>(0);
-    static_cast<R>(1);
-    { -a } -> std::convertible_to<R>;
-    { a + b } -> std::convertible_to<R>;
-    { a - b } -> std::convertible_to<R>;
-    { a* b } -> std::convertible_to<R>;
+constexpr R one() {
+    return static_cast<R>(1);
+}
+
+/**
+ * @brief The minimal requirements for a class `G` to implement a group.
+ *
+ * @tparam G
+ */
+template <typename G>
+concept Group = requires(G a, G b) {
+    zero<G>();
+    { -a } -> std::convertible_to<G>;
+    { a + b } -> std::convertible_to<G>;
+    { a - b } -> std::convertible_to<G>;
     { a == b } -> std::convertible_to<bool>;
     { a != b } -> std::convertible_to<bool>;
     a += b;
     a -= b;
+};
+
+/**
+ * @brief The minimal requirements for a class `R` to implement a ring.
+ *
+ * @tparam R
+ */
+template <typename R>
+concept Ring = Group<R> && requires(R a, R b) {
+    one<R>();
+    { a * b } -> std::convertible_to<R>;
     a *= b;
 };
 
@@ -53,30 +79,7 @@ concept Ring = requires(R a, R b) {
  * @tparam R The proposed class implementing a two-element ring.
  */
 template <typename R>
-concept BinaryRing = Ring<R> && R::get_p()
-== 2;
-
-/**
- * @brief Return the additive identity of the ring R.
- *
- * @tparam R The ring type.
- * @return R
- */
-template <Ring R>
-R zero() {
-    return static_cast<R>(0);
-}
-
-/**
- * @brief Return the multiplicative identity of the ring R.
- *
- * @tparam R The ring type.
- * @return R
- */
-template <Ring R>
-R one() {
-    return static_cast<R>(1);
-}
+concept BinaryRing = Ring<R> &&(one<R>() + one<R>() == zero<R>());
 
 /**
  * @brief The ring of (unsigned) integers (of type @c T) modulo @c p.
