@@ -26,7 +26,8 @@ TEST_CASE("BinaryRing concept", "[rings]") {
     CHECK_FALSE(BinaryRing<int>);
 }
 
-TEST_CASE("Identity functions on fundamental types output correctly, [rings]") {
+TEST_CASE("Identity functions on fundamental types output correctly,"
+          "[rings]") {
     CHECK(zero<int>() == 0);
     CHECK(zero<float>() == 0.0);
     CHECK(one<int>() == 1);
