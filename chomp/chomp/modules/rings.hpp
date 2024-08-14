@@ -173,8 +173,7 @@ public:
      * @return false Otherwise.
      */
     [[nodiscard]] constexpr bool operator==(const Z& rhs) const noexcept {
-        T sum = value + (p - rhs.value); // safe; see - and + operators;
-        return sum == p;
+        return value == rhs.value;
     }
     /**
      * @brief Inequality operator modulo p.
@@ -184,8 +183,7 @@ public:
      * @return false Otherwise.
      */
     [[nodiscard]] constexpr bool operator!=(const Z& rhs) const noexcept {
-        T sum = value + (p - rhs.value); // safe; see - and + operators;
-        return sum != p;
+        return value != rhs.value;
     }
 
     /**
