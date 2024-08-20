@@ -107,7 +107,7 @@ public:
      *
      * @param n
      */
-    constexpr Z(T n) : value(n % p) {}
+    constexpr explicit Z(T n) : value(n % p) {}
 
     /**
      * @brief Return value in range [0, p-1]
