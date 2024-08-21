@@ -68,7 +68,7 @@ concept Group = requires(G a, G b) {
 template <typename R>
 concept Ring = Group<R> && requires(R a, R b) {
     one<R>();
-    { a * b } -> std::convertible_to<R>;
+    { a* b } -> std::convertible_to<R>;
     a *= b;
 };
 
@@ -96,8 +96,12 @@ concept BinaryRing = Ring<R> &&(one<R>() + one<R>() == zero<R>());
  * @tparam p Modulo value; required p > 2 and p * p < max value of T.
  */
 template <typename T, T p>
-requires(std::unsigned_integral<T>&& p > static_cast<T>(1) &&
-         p < std::numeric_limits<T>::max() / p) class Z {
+requires requires {
+    std::unsigned_integral<T>;
+    p > static_cast<T>(1);
+    p < std::numeric_limits<T>::max() / p;
+}
+class Z {
 public:
     /**
      * @brief Underlying unsigned integral type.
