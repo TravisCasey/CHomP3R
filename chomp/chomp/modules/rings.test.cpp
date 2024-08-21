@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
@@ -77,3 +79,5 @@ TEST_CASE("Arithmetic operators of Z work as intended", "[rings]") {
 }
 
 } // namespace chomp::modules
+
+# endif // DOXYGEN_SHOULD_SKIP_THIS
