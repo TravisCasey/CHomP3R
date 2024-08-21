@@ -60,6 +60,9 @@ concept Group = requires(G a, G b) {
 /**
  * @brief The minimal requirements for a class `R` to implement a ring.
  *
+ * Importantly, we also assume (but do not check in the concept) that the ring
+ * is an integral domain, i.e., it has no zero divisors.
+ *
  * @tparam R
  */
 template <typename R>
