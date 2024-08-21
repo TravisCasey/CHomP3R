@@ -1,0 +1,278 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+#    include <cstddef>
+#    include <exception>
+#    include <tuple>
+#    include <type_traits>
+#    include <utility>
+#    include <vector>
+
+#    include <catch2/catch_template_test_macros.hpp>
+#    include <catch2/catch_test_macros.hpp>
+
+#    include <chomp/modules/modules.hpp>
+#    include <chomp/modules/rings.hpp>
+
+namespace chomp::modules {
+
+TEST_CASE("Hashable concept functions as expected", "[modules]") {
+    CHECK(Hashable<int>);
+    CHECK(Hashable<std::vector<bool>>);
+    CHECK_FALSE(Hashable<std::vector<int>>);
+}
+
+TEST_CASE("Comparable concept functions as expected", "[modules]") {
+    CHECK(Comparable<int>);
+    CHECK(Comparable<std::vector<unsigned short>>);
+    CHECK_FALSE(Comparable<Z<unsigned long long, 3>>);
+}
+
+struct HashableCell {
+    std::size_t val;
+    constexpr HashableCell(std::size_t n) noexcept : val(n){};
+    constexpr bool operator==(const HashableCell& rhs) const noexcept {
+        return val == rhs.val;
+    }
+};
+
+} // namespace chomp::modules
+
+namespace std {
+template <>
+struct hash<chomp::modules::HashableCell> {
+    size_t operator()(const chomp::modules::HashableCell& cell) const {
+        return cell.val;
+    }
+};
+} // namespace std
+
+namespace chomp::modules {
+
+struct ComparableCell {
+    int val;
+    constexpr ComparableCell(int n) noexcept : val(n){};
+    constexpr bool operator<(const ComparableCell& rhs) const noexcept {
+        return val < rhs.val;
+    }
+    constexpr bool operator==(const ComparableCell& rhs) const noexcept {
+        return val == rhs.val;
+    }
+};
+
+using ModuleTypes = std::tuple<
+    std::tuple<UnorderedSetModule<int, Z<unsigned int, 2>>,
+               std::integral_constant<int, 3>,
+               std::integral_constant<int, -25>>,
+    std::tuple<SetModule<ComparableCell, Z<unsigned long long, 2>>,
+               std::integral_constant<ComparableCell, ComparableCell(20)>,
+               std::integral_constant<ComparableCell, ComparableCell(-3)>>,
+    std::tuple<UnorderedMapModule<HashableCell, Z<unsigned short, 14>>,
+               std::integral_constant<HashableCell, HashableCell(2445)>,
+               std::integral_constant<HashableCell, HashableCell(0)>>,
+    std::tuple<MapModule<bool, int>, std::integral_constant<bool, true>,
+               std::integral_constant<bool, false>>>;
+
+TEMPLATE_LIST_TEST_CASE("Module classes model Module concept", "[modules]",
+                        ModuleTypes) {
+    using M = std::tuple_element_t<0, TestType>;
+    CHECK(Module<M>);
+}
+
+TEMPLATE_LIST_TEST_CASE("Non-default constructor functions correctly",
+                        "[modules]", ModuleTypes) {
+    using M = std::tuple_element_t<0, TestType>;
+    M elem_0;
+    M elem_1(0);
+
+    CHECK_THROWS_AS(M(2), std::domain_error);
+    CHECK(elem_0 == elem_1);
+}
+
+TEMPLATE_LIST_TEST_CASE("Module classes access, insertion, and iteration",
+                        "[modules]", ModuleTypes) {
+    using M = std::tuple_element_t<0, TestType>;
+    using T = typename M::cell_t;
+    using R = typename M::ring_t;
+    const T cell_0 = std::tuple_element_t<1, TestType>();
+    T cell_1 = std::tuple_element_t<2, TestType>();
+    M elem;
+
+    REQUIRE(elem[cell_0] == zero<R>());
+    REQUIRE(elem[cell_1] == zero<R>());
+    REQUIRE(elem.cell_cbegin() == elem.cell_cend());
+
+    elem.insert(cell_0, zero<R>());
+    elem.insert(cell_1, one<R>());
+
+    REQUIRE(elem[cell_0] == zero<R>());
+    REQUIRE(elem[cell_1] == one<R>());
+    REQUIRE(elem.cell_cbegin() != elem.cell_cend());
+
+    typename M::cell_iter_t it = elem.cell_cbegin();
+    REQUIRE((*it == cell_0 || *it == cell_1));
+    it++;
+    REQUIRE((it == elem.cell_cend() || *it == cell_0 || *it == cell_1));
+
+    elem.insert(cell_0, one<R>());
+    elem.insert(cell_1, -one<R>());
+
+    REQUIRE(elem[cell_0] == one<R>());
+    REQUIRE(elem[cell_1] == zero<R>());
+    REQUIRE(elem.cell_cbegin() != elem.cell_cend());
+
+    it = elem.cell_cbegin();
+    REQUIRE((*it == cell_0 || *it == cell_1));
+    it++;
+    REQUIRE((it == elem.cell_cend() || *it == cell_0 || *it == cell_1));
+}
+
+TEMPLATE_LIST_TEST_CASE("Linear function interface to modules", "[modules]",
+                        ModuleTypes) {
+    using M = std::tuple_element_t<0, TestType>;
+    using T = typename M::cell_t;
+    using R = typename M::ring_t;
+    const T cell_0 = std::tuple_element_t<1, TestType>();
+    T cell_1 = std::tuple_element_t<2, TestType>();
+    M elem_0;
+
+    typename M::lfunc_t lfunc = [&](const T& cell) {
+        std::vector<std::pair<const typename M::cell_t, typename M::ring_t>>
+            result;
+        result.push_back(std::make_pair(cell, one<R>()));
+        result.push_back(std::make_pair(cell_0, zero<R>()));
+        result.push_back(std::make_pair(cell_1, one<R>()));
+        return result;
+    };
+
+    M elem_1 = linear_apply(elem_0, lfunc);
+    REQUIRE(elem_0[cell_0] == zero<R>());
+    REQUIRE(elem_0[cell_1] == zero<R>());
+    REQUIRE(elem_1[cell_0] == zero<R>());
+    REQUIRE(elem_1[cell_1] == zero<R>());
+
+    elem_0.insert(cell_0, -one<R>());
+    elem_1 = linear_apply(elem_0, lfunc);
+    REQUIRE(elem_0[cell_0] == -one<R>());
+    REQUIRE(elem_0[cell_1] == zero<R>());
+    REQUIRE(elem_1[cell_0] == -one<R>());
+    REQUIRE(elem_1[cell_1] == -one<R>());
+
+    elem_0.insert(cell_0, -one<R>());
+    elem_0.insert(cell_1, one<R>());
+    elem_1 = linear_apply(elem_0, lfunc);
+    REQUIRE(elem_0[cell_0] == -one<R>() - one<R>());
+    REQUIRE(elem_0[cell_1] == one<R>());
+    REQUIRE(elem_1[cell_0] == -one<R>() - one<R>());
+    REQUIRE(elem_1[cell_1] == zero<R>());
+}
+
+TEMPLATE_LIST_TEST_CASE("Comparison operators on modules", "[modules]",
+                        ModuleTypes) {
+    using M = std::tuple_element_t<0, TestType>;
+    using T = typename M::cell_t;
+    using R = typename M::ring_t;
+    const T cell_0 = std::tuple_element_t<1, TestType>();
+    M elem_0;
+    M elem_1;
+
+    REQUIRE(elem_0 == elem_1);
+    REQUIRE_FALSE(elem_0 != elem_1);
+
+    elem_0.insert(cell_0, zero<R>());
+    REQUIRE(elem_0 == elem_1);
+    REQUIRE_FALSE(elem_0 != elem_1);
+
+    elem_0.insert(cell_0, one<R>());
+    REQUIRE_FALSE(elem_0 == elem_1);
+    REQUIRE(elem_0 != elem_1);
+
+    elem_1.insert(cell_0, one<R>());
+    REQUIRE(elem_0 == elem_1);
+    REQUIRE_FALSE(elem_0 != elem_1);
+}
+
+TEMPLATE_LIST_TEST_CASE("Arithmetic operators on modules", "[modules]",
+                        ModuleTypes) {
+    using M = std::tuple_element_t<0, TestType>;
+    using T = typename M::cell_t;
+    using R = typename M::ring_t;
+    const T cell_0 = std::tuple_element_t<1, TestType>();
+    T cell_1 = std::tuple_element_t<2, TestType>();
+    M elem_0;
+    M elem_1;
+
+    M elem_n = -elem_0;
+    M elem_a = elem_0 + elem_1;
+    M elem_s = elem_0 - elem_1;
+    REQUIRE(elem_0[cell_0] == zero<R>());
+    REQUIRE(elem_0[cell_1] == zero<R>());
+    REQUIRE(elem_1[cell_0] == zero<R>());
+    REQUIRE(elem_1[cell_1] == zero<R>());
+    REQUIRE(elem_n[cell_0] == zero<R>());
+    REQUIRE(elem_n[cell_1] == zero<R>());
+    REQUIRE(elem_a[cell_0] == zero<R>());
+    REQUIRE(elem_a[cell_1] == zero<R>());
+    REQUIRE(elem_s[cell_0] == zero<R>());
+    REQUIRE(elem_s[cell_1] == zero<R>());
+    REQUIRE(elem_s == elem_0 + (-elem_1));
+    REQUIRE(elem_a == -elem_n + elem_1);
+
+    elem_0.insert(cell_0, one<R>());
+    elem_1.insert(cell_1, one<R>());
+
+    elem_n = -elem_0;
+    elem_a = elem_0 + elem_1;
+    elem_s = elem_0 - elem_1;
+    REQUIRE(elem_0[cell_0] == one<R>());
+    REQUIRE(elem_0[cell_1] == zero<R>());
+    REQUIRE(elem_1[cell_0] == zero<R>());
+    REQUIRE(elem_1[cell_1] == one<R>());
+    REQUIRE(elem_n[cell_0] == -one<R>());
+    REQUIRE(elem_n[cell_1] == zero<R>());
+    REQUIRE(elem_a[cell_0] == one<R>());
+    REQUIRE(elem_a[cell_1] == one<R>());
+    REQUIRE(elem_s[cell_0] == one<R>());
+    REQUIRE(elem_s[cell_1] == -one<R>());
+    REQUIRE(elem_s == elem_0 + (-elem_1));
+    REQUIRE(elem_a == -elem_n + elem_1);
+
+    elem_0 *= one<R>() + one<R>();
+    elem_1 = -one<R>() * elem_1 * -one<R>();
+
+    elem_n = -elem_0;
+    elem_a = elem_0 + elem_1;
+    elem_s = elem_0 - elem_1;
+    REQUIRE(elem_0[cell_0] == one<R>() + one<R>());
+    REQUIRE(elem_0[cell_1] == zero<R>());
+    REQUIRE(elem_1[cell_0] == zero<R>());
+    REQUIRE(elem_1[cell_1] == one<R>());
+    REQUIRE(elem_n[cell_0] == -(one<R>() + one<R>()));
+    REQUIRE(elem_n[cell_1] == zero<R>());
+    REQUIRE(elem_a[cell_0] == one<R>() + one<R>());
+    REQUIRE(elem_a[cell_1] == one<R>());
+    REQUIRE(elem_s[cell_0] == one<R>() + one<R>());
+    REQUIRE(elem_s[cell_1] == -one<R>());
+    REQUIRE(elem_s == elem_0 + (-elem_1));
+    REQUIRE(elem_a == -elem_n + elem_1);
+
+    REQUIRE(elem_a + std::move(elem_s) == (one<R>() + one<R>()) * elem_0);
+
+    elem_0 += elem_1;
+    REQUIRE(elem_0[cell_0] == one<R>() + one<R>());
+    REQUIRE(elem_0[cell_1] == one<R>());
+    elem_1 -= std::move(elem_0);
+    REQUIRE(elem_1[cell_0] == -one<R>() - one<R>());
+    REQUIRE(elem_1[cell_1] == zero<R>());
+
+    REQUIRE(elem_1 * -one<R>() == -elem_1);
+}
+
+} // namespace chomp::modules
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
