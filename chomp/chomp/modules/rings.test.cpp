@@ -4,13 +4,13 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <chomp/modules/rings.hpp>
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 namespace chomp::modules {
 
