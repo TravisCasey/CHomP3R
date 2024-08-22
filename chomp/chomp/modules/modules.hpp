@@ -18,6 +18,7 @@
 #include <map>
 #include <set>
 #include <stdexcept>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -904,6 +905,44 @@ public:
     bool operator==(const MapModule& rhs) const {
         return cells == rhs.cells;
     }
+};
+
+// Implementation detail does not need to be documented.
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+template <bool H, bool B, typename T, typename R>
+struct Chooser {
+    using type = MapModule<T, R>;
+};
+
+template <typename T, typename R>
+struct Chooser<true, true, T, R> {
+    using type = UnorderedSetModule<T, R>;
+};
+
+template <typename T, typename R>
+struct Chooser<true, false, T, R> {
+    using type = UnorderedMapModule<T, R>;
+};
+
+template <typename T, typename R>
+struct Chooser<false, true, T, R> {
+    using type = SetModule<T, R>;
+};
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
+/**
+ * @brief Selects best `Module` type at compile time based on concepts
+ * fulfilled by `T` and `R`
+ *
+ * @tparam T Cell type.
+ * @tparam R Ring type.
+ */
+template <typename T, typename R>
+requires Ring<R> &&(Hashable<T> || Comparable<T>)struct DefaultModule {
+    /** @brief Chosen Module type. */
+    using type = typename Chooser<Hashable<T>, BinaryRing<R>, T, R>::type;
 };
 
 } // namespace chomp::modules

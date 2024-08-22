@@ -4,20 +4,20 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#include <cstddef>
+#include <exception>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+
+#include <chomp/modules/modules.hpp>
+#include <chomp/modules/rings.hpp>
+
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-
-#    include <cstddef>
-#    include <exception>
-#    include <tuple>
-#    include <type_traits>
-#    include <utility>
-#    include <vector>
-
-#    include <catch2/catch_template_test_macros.hpp>
-#    include <catch2/catch_test_macros.hpp>
-
-#    include <chomp/modules/modules.hpp>
-#    include <chomp/modules/rings.hpp>
 
 namespace chomp::modules {
 
@@ -271,6 +271,25 @@ TEMPLATE_LIST_TEST_CASE("Arithmetic operators on modules", "[modules]",
     REQUIRE(elem_1[cell_1] == zero<R>());
 
     REQUIRE(elem_1 * -one<R>() == -elem_1);
+}
+
+using CellAndRingTypes = std::tuple<
+    std::tuple<int, Z<unsigned int, 2>,
+               UnorderedSetModule<int, Z<unsigned int, 2>>>,
+    std::tuple<int, Z<unsigned int, 3>,
+               UnorderedMapModule<int, Z<unsigned int, 3>>>,
+    std::tuple<std::vector<short>, Z<unsigned long long, 2>,
+               SetModule<std::vector<short>, Z<unsigned long long, 2>>>,
+    std::tuple<std::vector<short>, Z<unsigned long long, 5>,
+               MapModule<std::vector<short>, Z<unsigned long long, 5>>>>;
+
+TEMPLATE_LIST_TEST_CASE("DefaultModule chooses Module type correctly",
+                        "[modules]", CellAndRingTypes) {
+    using T = std::tuple_element_t<0, TestType>;
+    using R = std::tuple_element_t<1, TestType>;
+    using M = std::tuple_element_t<2, TestType>;
+
+    CHECK(std::same_as<typename DefaultModule<T, R>::type, M>);
 }
 
 } // namespace chomp::modules
