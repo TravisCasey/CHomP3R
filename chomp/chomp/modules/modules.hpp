@@ -28,6 +28,47 @@
 namespace chomp::modules {
 
 /**
+ * @brief Types `T` modeling this concept have `std::hash<T>` defined
+ * as well as the equality operator.
+ *
+ * Types modeling this concept can be stored in `std::unordered_set` and can be
+ * keys in `std::unordered_map`, enabling the use of `UnorderedSetModule` and
+ * `UnorderedMapModule` with cell type `T`.
+ *
+ * @tparam T
+ */
+template <typename T>
+concept Hashable = requires(T a, T b) {
+    { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
+    { a == b } -> std::same_as<bool>;
+};
+
+/**
+ * @brief Types `T` modeling this concept have `std::less<T>` defined as well as
+ * the equality operator.
+ *
+ * Types modeling this concept can be stored in `std::set` and can be keys in
+ * `std::map`, enabling the use of `SetModule` and `MapModule` with cell type
+ * `T`.
+ *
+ * @tparam T
+ */
+template <typename T>
+concept Comparable = requires(T a, T b) {
+    { a < b } -> std::same_as<bool>;
+    { a == b } -> std::same_as<bool>;
+};
+
+/**
+ * @brief Types `T` modeling this concept either model `Hashable` or
+ * `Comparable`, enabling their use in one of the module types.
+ *
+ * @tparam T
+ */
+template <typename T>
+concept CellType = Hashable<T> || Comparable<T>;
+
+/**
  * @brief Abstract base class implementing free `R`-modules on basis set  `T`.
  *
  * Concrete classes deriving from this base classes have arithmetic and other
@@ -39,7 +80,7 @@ namespace chomp::modules {
  * @tparam R Ring coefficient type.
  * @tparam I Input iterator type over cells; implementation-dependent.
  */
-template <typename T, Ring R, std::input_iterator I>
+template <CellType T, Ring R, std::input_iterator I>
 class AbstractModule {
 public:
     /** @brief Cell iterator type */
@@ -131,7 +172,7 @@ public:
  * @tparam M `R`-Module type with basis `T`.
  */
 template <typename M>
-concept Module = Ring<typename M::ring_t> &&
+concept Module = Ring<typename M::ring_t> && CellType<typename M::cell_t> &&
     std::derived_from<M, AbstractModule<typename M::cell_t, typename M::ring_t,
                                         typename M::cell_iter_t>> &&
     std::same_as<typename M::lfunc_t,
@@ -468,38 +509,6 @@ M operator*(const typename M::ring_t& lhs, M&& rhs) {
     result *= lhs;
     return result;
 }
-
-/**
- * @brief Types `T` modeling this concept have `std::hash<T>` defined
- * as well as the equality operator.
- *
- * Types modeling this concept can be stored in `std::unordered_set` and can be
- * keys in `std::unordered_map`, enabling the use of `UnorderedSetModule` and
- * `UnorderedMapModule` with cell type `T`.
- *
- * @tparam T
- */
-template <typename T>
-concept Hashable = requires(T a, T b) {
-    { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
-    { a == b } -> std::same_as<bool>;
-};
-
-/**
- * @brief Types `T` modeling this concept have `std::less<T>` defined as well as
- * the equality operator.
- *
- * Types modeling this concept can be stored in `std::set` and can be keys in
- * `std::map`, enabling the use of `SetModule` and `MapModule` with cell type
- * `T`.
- *
- * @tparam T
- */
-template <typename T>
-concept Comparable = requires(T a, T b) {
-    { a < b } -> std::same_as<bool>;
-    { a == b } -> std::same_as<bool>;
-};
 
 /**
  * @brief This class template implements a free `R`-module on basis set `T`. Its
@@ -939,8 +948,8 @@ struct Chooser<false, true, T, R> {
  * @tparam T Cell type.
  * @tparam R Ring type.
  */
-template <typename T, typename R>
-requires Ring<R> &&(Hashable<T> || Comparable<T>)struct DefaultModule {
+template <CellType T, Ring R>
+struct DefaultModule {
     /** @brief Chosen Module type. */
     using type = typename Chooser<Hashable<T>, BinaryRing<R>, T, R>::type;
 };
