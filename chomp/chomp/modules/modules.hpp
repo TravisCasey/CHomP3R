@@ -50,8 +50,6 @@ public:
     using cell_t = T;
     /** @brief Ring type. */
     using ring_t = R;
-    /** @brief Linear function type. */
-    using lfunc_t = std::function<std::vector<std::pair<const T, R>>(const T&)>;
 
     /**
      * @brief Default Constructor.
@@ -144,8 +142,7 @@ concept Module = std::copy_constructible<M> && std::default_initializable<M> &&
     std::derived_from<M, AbstractModule<typename M::cell_t, typename M::ring_t,
                                         typename M::cell_iter_t>> &&
     std::same_as<typename M::lfunc_t,
-                 typename AbstractModule<typename M::cell_t, typename M::ring_t,
-                                         typename M::cell_iter_t>::lfunc_t>;
+                 std::function<M(const typename M::cell_t&)>>;
 
 /**
  * @brief Apply a function `func` linearly along the cells in this element.
@@ -161,20 +158,12 @@ concept Module = std::copy_constructible<M> && std::default_initializable<M> &&
 template <Module M>
 M linear_apply(const M& elem, const typename M::lfunc_t& func) {
     M result;
-
-    // Apply `func` to each cell in `elem`.
+    // Apply `func` to each cell in `elem` and multiple the result by its
+    // coefficient in `elem`.
     for (typename M::cell_iter_t it = elem.cell_cbegin();
          it != elem.cell_cend(); it++) {
-        typename M::lfunc_t::result_type func_result = func(*it);
-
-        // Move resulting cell, coefficient pairs into `result`.
-        for (auto func_it = std::make_move_iterator(func_result.begin());
-             func_it != std::make_move_iterator(func_result.end()); func_it++) {
-            func_it->second *= elem[*it]; // Apply coefficient from `elem`.
-            result.insert(std::get<0>(*func_it), std::get<1>(*func_it));
-        }
+        result += elem[*it] * func(*it);
     }
-
     return result;
 }
 
@@ -508,8 +497,8 @@ public:
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
     using ring_t = typename AbstractModule<T, R, cell_iter_t>::ring_t;
-    /** @copydoc AbstractModule::lfunc_t */
-    using lfunc_t = typename AbstractModule<T, R, cell_iter_t>::lfunc_t;
+    /** @brief Linear function type. */
+    using lfunc_t = std::function<UnorderedSetModule<T, R>(const T&)>;
 
     /** @copydoc AbstractModule() */
     UnorderedSetModule() = default;
@@ -592,8 +581,8 @@ public:
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
     using ring_t = typename AbstractModule<T, R, cell_iter_t>::ring_t;
-    /** @copydoc AbstractModule::lfunc_t */
-    using lfunc_t = typename AbstractModule<T, R, cell_iter_t>::lfunc_t;
+    /** @copydoc UnorderedSetModule::lfunc_t */
+    using lfunc_t = std::function<SetModule<T, R>(const T&)>;
 
     /** @copydoc AbstractModule() */
     SetModule() = default;
@@ -733,8 +722,8 @@ public:
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
     using ring_t = typename AbstractModule<T, R, cell_iter_t>::ring_t;
-    /** @copydoc AbstractModule::lfunc_t */
-    using lfunc_t = typename AbstractModule<T, R, cell_iter_t>::lfunc_t;
+    /** @copydoc UnorderedSetModule::lfunc_t */
+    using lfunc_t = std::function<UnorderedMapModule<T, R>(const T&)>;
 
     /** @copydoc AbstractModule() */
     UnorderedMapModule() = default;
@@ -821,8 +810,8 @@ public:
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
     using ring_t = typename AbstractModule<T, R, cell_iter_t>::ring_t;
-    /** @copydoc AbstractModule::lfunc_t */
-    using lfunc_t = typename AbstractModule<T, R, cell_iter_t>::lfunc_t;
+    /** @copydoc UnorderdSetModule::lfunc_t */
+    using lfunc_t = std::function<MapModule<T, R>(const T&)>;
 
     /** @copydoc AbstractModule() */
     MapModule() = default;

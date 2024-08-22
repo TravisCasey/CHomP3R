@@ -137,11 +137,10 @@ TEMPLATE_LIST_TEST_CASE("Linear function interface to modules", "[modules]",
     M elem_0;
 
     typename M::lfunc_t lfunc = [&](const T& cell) {
-        std::vector<std::pair<const typename M::cell_t, typename M::ring_t>>
-            result;
-        result.push_back(std::make_pair(cell, one<R>()));
-        result.push_back(std::make_pair(cell_0, zero<R>()));
-        result.push_back(std::make_pair(cell_1, one<R>()));
+        M result;
+        result.insert(cell, one<R>());
+        result.insert(cell_0, zero<R>());
+        result.insert(cell_1, one<R>());
         return result;
     };
 
@@ -278,7 +277,7 @@ using CellAndRingTypes = std::tuple<
 
     std::tuple<std::vector<short>, Z<unsigned long long, 2>,
                SetModule<std::vector<short>, Z<unsigned long long, 2>>>,
-               
+
     std::tuple<std::vector<short>, Z<unsigned long long, 5>,
                MapModule<std::vector<short>, Z<unsigned long long, 5>>>
 
