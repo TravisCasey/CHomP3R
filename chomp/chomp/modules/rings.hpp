@@ -5,8 +5,8 @@
  */
 
 /** @file
- * @brief This file handles the requirements on and definitions of the
- * coefficient rings.
+ * @brief This file defines group and ring identity functions and the cyclic
+ * rings `Z`.
  *
  */
 
@@ -16,6 +16,8 @@
 #include <concepts>
 #include <limits>
 
+#include <chomp/modules/concepts.hpp>
+
 namespace chomp::modules {
 
 /**
@@ -24,7 +26,7 @@ namespace chomp::modules {
  * @tparam R The ring type.
  * @return R
  */
-template <typename G>
+template <Group G>
 constexpr G zero() {
     return static_cast<G>(0);
 }
@@ -35,54 +37,10 @@ constexpr G zero() {
  * @tparam R The ring type.
  * @return R
  */
-template <typename R>
+template <Ring R>
 constexpr R one() {
     return static_cast<R>(1);
 }
-
-/**
- * @brief The minimal requirements for a class `G` to implement a group.
- *
- * @tparam G
- */
-template <typename G>
-concept Group = requires(G a, G b) {
-    zero<G>();
-    { -a } -> std::convertible_to<G>;
-    { a + b } -> std::convertible_to<G>;
-    { a - b } -> std::convertible_to<G>;
-    { a == b } -> std::convertible_to<bool>;
-    { a != b } -> std::convertible_to<bool>;
-    a += b;
-    a -= b;
-};
-
-/**
- * @brief The minimal requirements for a class `R` to implement a ring.
- *
- * Importantly, we also assume (but do not check in the concept) that the ring
- * is an integral domain, i.e., it has no zero divisors.
- *
- * @tparam R
- */
-template <typename R>
-concept Ring = Group<R> && requires(R a, R b) {
-    one<R>();
-    { a* b } -> std::convertible_to<R>;
-    a *= b;
-};
-
-/**
- * @brief Classes implementing this concept represent the ring (field) with two
- * elements.
- *
- * While there is only one such ring, there may be different @c Z data
- * structures implementing it due to the @c T template argument.
- *
- * @tparam R The proposed class implementing a two-element ring.
- */
-template <typename R>
-concept BinaryRing = Ring<R> &&(one<R>() + one<R>() == zero<R>());
 
 /**
  * @brief The ring of (unsigned) integers (of type @c T) modulo @c p.
@@ -102,6 +60,7 @@ requires requires {
     p < std::numeric_limits<T>::max() / p;
 }
 class Z {
+    T value;
 public:
     /**
      * @brief Underlying unsigned integral type.
@@ -229,9 +188,6 @@ public:
         value = (value * rhs.value) % p; // safe; see * operator
         return *this;
     }
-
-private:
-    T value;
 };
 
 } // namespace chomp::modules

@@ -4,25 +4,16 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-#include <string>
-
 #include <catch2/catch_test_macros.hpp>
 
+#include <chomp/modules/concepts.hpp>
 #include <chomp/modules/rings.hpp>
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 namespace chomp::modules {
 
-TEST_CASE("Fundamental types and Group/Ring concept", "[rings]") {
-    CHECK_FALSE(Group<std::string>);
-    CHECK(Ring<int>);
-    CHECK(Ring<float>);
-    CHECK_FALSE(Group<void>);
-    CHECK(Ring<char>);
-}
-
-TEST_CASE("BinaryRing concept", "[rings]") {
+TEST_CASE("BinaryRing concept on Z", "[rings]") {
     CHECK(BinaryRing<Z<unsigned int, 2>>);
     CHECK_FALSE(BinaryRing<Z<unsigned int, 3>>);
     CHECK_FALSE(BinaryRing<int>);
@@ -38,7 +29,6 @@ TEST_CASE("Identity functions on fundamental types output correctly,"
 
 TEST_CASE("Z constraints work as intended", "[rings]") {
     CHECK_NOTHROW(Z<unsigned int, 2>(3));
-
     CHECK_NOTHROW(Z<unsigned short, 4>(0));
     CHECK_NOTHROW(Z<unsigned short, (1 << 8) - 1>(0));
 }
@@ -80,4 +70,4 @@ TEST_CASE("Arithmetic operators of Z work as intended", "[rings]") {
 
 } // namespace chomp::modules
 
-# endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif // DOXYGEN_SHOULD_SKIP_THIS

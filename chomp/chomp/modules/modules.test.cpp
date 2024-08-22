@@ -21,18 +21,6 @@
 
 namespace chomp::modules {
 
-TEST_CASE("Hashable concept functions as expected", "[modules]") {
-    CHECK(Hashable<int>);
-    CHECK(Hashable<std::vector<bool>>);
-    CHECK_FALSE(Hashable<std::vector<int>>);
-}
-
-TEST_CASE("Comparable concept functions as expected", "[modules]") {
-    CHECK(Comparable<int>);
-    CHECK(Comparable<std::vector<unsigned short>>);
-    CHECK_FALSE(Comparable<Z<unsigned long long, 3>>);
-}
-
 struct HashableCell {
     std::size_t val;
     constexpr HashableCell(std::size_t n) noexcept : val(n){};
@@ -66,17 +54,24 @@ struct ComparableCell {
 };
 
 using ModuleTypes = std::tuple<
+
     std::tuple<UnorderedSetModule<int, Z<unsigned int, 2>>,
                std::integral_constant<int, 3>,
                std::integral_constant<int, -25>>,
+
     std::tuple<SetModule<ComparableCell, Z<unsigned long long, 2>>,
                std::integral_constant<ComparableCell, ComparableCell(20)>,
                std::integral_constant<ComparableCell, ComparableCell(-3)>>,
+
     std::tuple<UnorderedMapModule<HashableCell, Z<unsigned short, 14>>,
                std::integral_constant<HashableCell, HashableCell(2445)>,
                std::integral_constant<HashableCell, HashableCell(0)>>,
-    std::tuple<MapModule<bool, int>, std::integral_constant<bool, true>,
-               std::integral_constant<bool, false>>>;
+
+    std::tuple<MapModule<bool, int>,
+               std::integral_constant<bool, true>,
+               std::integral_constant<bool, false>>
+
+>;
 
 TEMPLATE_LIST_TEST_CASE("Module classes model Module concept", "[modules]",
                         ModuleTypes) {
@@ -274,14 +269,20 @@ TEMPLATE_LIST_TEST_CASE("Arithmetic operators on modules", "[modules]",
 }
 
 using CellAndRingTypes = std::tuple<
+
     std::tuple<int, Z<unsigned int, 2>,
                UnorderedSetModule<int, Z<unsigned int, 2>>>,
+
     std::tuple<int, Z<unsigned int, 3>,
                UnorderedMapModule<int, Z<unsigned int, 3>>>,
+
     std::tuple<std::vector<short>, Z<unsigned long long, 2>,
                SetModule<std::vector<short>, Z<unsigned long long, 2>>>,
+               
     std::tuple<std::vector<short>, Z<unsigned long long, 5>,
-               MapModule<std::vector<short>, Z<unsigned long long, 5>>>>;
+               MapModule<std::vector<short>, Z<unsigned long long, 5>>>
+
+>;
 
 TEMPLATE_LIST_TEST_CASE("DefaultModule chooses Module type correctly",
                         "[modules]", CellAndRingTypes) {

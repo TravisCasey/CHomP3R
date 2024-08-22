@@ -22,51 +22,12 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
+#include <chomp/modules/concepts.hpp>
 #include <chomp/modules/rings.hpp>
 
 namespace chomp::modules {
-
-/**
- * @brief Types `T` modeling this concept have `std::hash<T>` defined
- * as well as the equality operator.
- *
- * Types modeling this concept can be stored in `std::unordered_set` and can be
- * keys in `std::unordered_map`, enabling the use of `UnorderedSetModule` and
- * `UnorderedMapModule` with cell type `T`.
- *
- * @tparam T
- */
-template <typename T>
-concept Hashable = requires(T a, T b) {
-    { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
-    { a == b } -> std::same_as<bool>;
-};
-
-/**
- * @brief Types `T` modeling this concept have `std::less<T>` defined as well as
- * the equality operator.
- *
- * Types modeling this concept can be stored in `std::set` and can be keys in
- * `std::map`, enabling the use of `SetModule` and `MapModule` with cell type
- * `T`.
- *
- * @tparam T
- */
-template <typename T>
-concept Comparable = requires(T a, T b) {
-    { a < b } -> std::same_as<bool>;
-    { a == b } -> std::same_as<bool>;
-};
-
-/**
- * @brief Types `T` modeling this concept either model `Hashable` or
- * `Comparable`, enabling their use in one of the module types.
- *
- * @tparam T
- */
-template <typename T>
-concept CellType = Hashable<T> || Comparable<T>;
 
 /**
  * @brief Abstract base class implementing free `R`-modules on basis set  `T`.
@@ -101,8 +62,8 @@ public:
      */
     AbstractModule() = default;
     /**
-     * @brief Only used for `static_cast` of 0 to module types,
-     * satisfying the `Group` concept.
+     * @brief Only used for `static_cast` of 0 to module types, satisfying the
+     * `Group` concept.
      *
      * The additive identity is the default initialization. Values of `n` other
      * than zero throw `std::domain_error`.
@@ -165,6 +126,12 @@ public:
  * @brief The requirements for a class `M` to model a free `R`-module on the
  * basis `T`.
  *
+ * Namely, the requirements are:
+ *   - Derived from AbstractModule base class with correct member types
+ *   - Copy constructible
+ *   - Default initializable
+ *   - Equality comparable
+ *
  * @sa AbstractModule
  *
  * @tparam T Cell type.
@@ -172,14 +139,13 @@ public:
  * @tparam M `R`-Module type with basis `T`.
  */
 template <typename M>
-concept Module = Ring<typename M::ring_t> && CellType<typename M::cell_t> &&
+concept Module = std::copy_constructible<M> && std::default_initializable<M> &&
+    std::equality_comparable<M> &&
     std::derived_from<M, AbstractModule<typename M::cell_t, typename M::ring_t,
                                         typename M::cell_iter_t>> &&
     std::same_as<typename M::lfunc_t,
                  typename AbstractModule<typename M::cell_t, typename M::ring_t,
-                                         typename M::cell_iter_t>::lfunc_t> &&
-    std::copy_constructible<M> && std::default_initializable<M> &&
-    std::equality_comparable<M>;
+                                         typename M::cell_iter_t>::lfunc_t>;
 
 /**
  * @brief Apply a function `func` linearly along the cells in this element.
@@ -195,16 +161,20 @@ concept Module = Ring<typename M::ring_t> && CellType<typename M::cell_t> &&
 template <Module M>
 M linear_apply(const M& elem, const typename M::lfunc_t& func) {
     M result;
+
+    // Apply `func` to each cell in `elem`.
     for (typename M::cell_iter_t it = elem.cell_cbegin();
          it != elem.cell_cend(); it++) {
-        std::vector<std::pair<const typename M::cell_t, typename M::ring_t>>
-            func_result = func(*it);
+        typename M::lfunc_t::result_type func_result = func(*it);
+
+        // Move resulting cell, coefficient pairs into `result`.
         for (auto func_it = std::make_move_iterator(func_result.begin());
              func_it != std::make_move_iterator(func_result.end()); func_it++) {
-            func_it->second *= elem[*it];
+            func_it->second *= elem[*it]; // Apply coefficient from `elem`.
             result.insert(std::get<0>(*func_it), std::get<1>(*func_it));
         }
     }
+
     return result;
 }
 
@@ -221,8 +191,8 @@ M linear_apply(const M& elem, const typename M::lfunc_t& func) {
  */
 template <Module M>
 M& operator+=(M& lhs, const M& rhs) {
-    for (typename M::cell_iter_t it = rhs.cell_cbegin(); it != rhs.cell_cend();
-         it++) {
+    for (typename M::cell_iter_t it = rhs.cell_cbegin();
+         it != rhs.cell_cend(); it++) {
         lhs.insert(*it, rhs[*it]);
     }
     return lhs;
