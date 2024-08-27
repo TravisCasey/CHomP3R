@@ -40,9 +40,9 @@ namespace chomp::modules {
  *
  * @tparam T Cell type that forms the basis for the free `R`-module.
  * @tparam R Ring coefficient type.
- * @tparam I Input iterator type over cells; implementation-dependent.
+ * @tparam I Forward input iterator type over cells; implementation-dependent.
  */
-template <CellType T, Ring R, std::input_iterator I>
+template <CellType T, Ring R, std::forward_iterator I>
 class AbstractModule {
 public:
     /** @brief Cell iterator type */
