@@ -100,31 +100,31 @@ TEMPLATE_LIST_TEST_CASE("Module classes access, insertion, and iteration",
 
     REQUIRE(elem[cell_0] == zero<R>());
     REQUIRE(elem[cell_1] == zero<R>());
-    REQUIRE(elem.cell_cbegin() == elem.cell_cend());
+    REQUIRE(elem.cbegin() == elem.cend());
 
     elem.insert(cell_0, zero<R>());
     elem.insert(cell_1, one<R>());
 
     REQUIRE(elem[cell_0] == zero<R>());
     REQUIRE(elem[cell_1] == one<R>());
-    REQUIRE(elem.cell_cbegin() != elem.cell_cend());
+    REQUIRE(elem.cbegin() != elem.cend());
 
-    typename M::cell_iter_t it = elem.cell_cbegin();
+    typename M::cell_iter_t it = elem.cbegin();
     REQUIRE((*it == cell_0 || *it == cell_1));
     it++;
-    REQUIRE((it == elem.cell_cend() || *it == cell_0 || *it == cell_1));
+    REQUIRE((it == elem.cend() || *it == cell_0 || *it == cell_1));
 
     elem.insert(cell_0, one<R>());
     elem.insert(cell_1, -one<R>());
 
     REQUIRE(elem[cell_0] == one<R>());
     REQUIRE(elem[cell_1] == zero<R>());
-    REQUIRE(elem.cell_cbegin() != elem.cell_cend());
+    REQUIRE(elem.cbegin() != elem.cend());
 
-    it = elem.cell_cbegin();
+    it = elem.cbegin();
     REQUIRE((*it == cell_0 || *it == cell_1));
     it++;
-    REQUIRE((it == elem.cell_cend() || *it == cell_0 || *it == cell_1));
+    REQUIRE((it == elem.cend() || *it == cell_0 || *it == cell_1));
 }
 
 TEMPLATE_LIST_TEST_CASE("Linear function interface to modules", "[modules]",

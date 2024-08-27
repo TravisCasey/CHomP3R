@@ -95,13 +95,13 @@ public:
      *
      * @return cell_iter_t
      */
-    virtual cell_iter_t cell_cbegin() const = 0;
+    virtual cell_iter_t cbegin() const = 0;
     /**
      * @brief Constant input iterator to the end of the cells in this element.
      *
      * @return cell_iter_t
      */
-    virtual cell_iter_t cell_cend() const = 0;
+    virtual cell_iter_t cend() const = 0;
 
     /**
      * @brief Insert a cell, coefficient pair into the element.
@@ -148,6 +148,42 @@ concept Module = std::copy_constructible<M> && std::default_initializable<M> &&
                  std::function<M(const typename M::cell_t&)>>;
 
 /**
+ * @brief Returns a (constant) iterator to the beginning of the cells in the
+ * module `m`.
+ *
+ * This allows for range-based for loops over the cells in `m`, but does not
+ * allow modification of the keys in `m`.
+ *
+ * @tparam M Module type.
+ * @param m Module element of type `M`.
+ * @return M::cell_iter_t Constant iterator to the beginning of the cells in
+ * `m`.
+ *
+ * @sa end()
+ */
+template <Module M>
+typename M::cell_iter_t begin(const M& m) {
+    return m.cbegin();
+}
+/**
+ * @brief Returns a (constant) iterator to the end of the cells in the module
+ * `m`.
+ *
+ * This allows for range-based for loops over the cells in `m`, but does not
+ * allow modification of the keys in `m`.
+ *
+ * @tparam M Module type.
+ * @param m Module element of type `M`.
+ * @return M::cell_iter_t Constant iterator to the end of the cells in `m`.
+ *
+ * @sa begin()
+ */
+template <Module M>
+typename M::cell_iter_t end(const M& m) {
+    return m.cend();
+}
+
+/**
  * @brief Apply a function `func` linearly along the cells in this element.
  *
  * @tparam M `Module` type.
@@ -163,9 +199,8 @@ M linear_apply(const M& elem, const typename M::lfunc_t& func) {
     M result;
     // Apply `func` to each cell in `elem` and multiple the result by its
     // coefficient in `elem`.
-    for (typename M::cell_iter_t it = elem.cell_cbegin();
-         it != elem.cell_cend(); it++) {
-        result += elem[*it] * func(*it);
+    for (const typename M::cell_t& cell : elem) {
+        result += elem[cell] * func(cell);
     }
     return result;
 }
@@ -183,22 +218,8 @@ M linear_apply(const M& elem, const typename M::lfunc_t& func) {
  */
 template <Module M>
 M& operator+=(M& lhs, const M& rhs) {
-    for (typename M::cell_iter_t it = rhs.cell_cbegin();
-         it != rhs.cell_cend(); it++) {
-        lhs.insert(*it, rhs[*it]);
-    }
-    return lhs;
-}
-/**
- * @copydoc operator+=()
- * @relatedalso AbstractModule
- */
-template <Module M>
-M& operator+=(M& lhs, M&& rhs) {
-    for (std::move_iterator<typename M::cell_iter_t> it =
-             std::make_move_iterator(rhs.cell_cbegin());
-         it != std::make_move_iterator(rhs.cell_cend()); it++) {
-        lhs.insert(*it, rhs[*it]);
+    for (const typename M::cell_t cell : rhs) {
+        lhs.insert(cell, rhs[cell]);
     }
     return lhs;
 }
@@ -216,9 +237,8 @@ M& operator+=(M& lhs, M&& rhs) {
  */
 template <Module M>
 M& operator-=(M& lhs, const M& rhs) {
-    for (typename M::cell_iter_t it = rhs.cell_cbegin(); it != rhs.cell_cend();
-         it++) {
-        lhs.insert(*it, -rhs[*it]);
+    for (const typename M::cell_t cell : rhs) {
+        lhs.insert(cell, -rhs[cell]);
     }
     return lhs;
 }
@@ -228,11 +248,7 @@ M& operator-=(M& lhs, const M& rhs) {
  */
 template <Module M>
 M& operator-=(M& lhs, M&& rhs) {
-    for (std::move_iterator<typename M::cell_iter_t> it =
-             std::make_move_iterator(rhs.cell_cbegin());
-         it != std::make_move_iterator(rhs.cell_cend()); it++) {
-        lhs.insert(*it, -rhs[*it]);
-    }
+    lhs += -std::move(rhs);
     return lhs;
 }
 
@@ -257,9 +273,8 @@ M& operator*=(M& lhs, const typename M::ring_t& rhs) {
         lhs.clear();
         return lhs;
     }
-    for (typename M::cell_iter_t it = lhs.cell_cbegin(); it != lhs.cell_cend();
-         it++) {
-        lhs.insert(*it, (rhs - one<typename M::ring_t>()) * lhs[*it]);
+    for (const typename M::cell_t cell : lhs) {
+        lhs.insert(cell, (rhs - one<typename M::ring_t>()) * lhs[cell]);
     }
     return lhs;
 }
@@ -492,6 +507,7 @@ class UnorderedSetModule
     std::unordered_set<T> cells;
     using iter_t = typename std::unordered_set<T>::iterator;
     using citer_t = typename std::unordered_set<T>::const_iterator;
+    using node_t = typename std::unordered_set<T>::node_type;
 
 public:
     /** @copydoc AbstractModule::cell_iter_t */
@@ -514,12 +530,12 @@ public:
         return cells.count(cell) == 0 ? zero<R>() : one<R>();
     }
 
-    /** @copydoc AbstractModule::cell_cbegin() */
-    cell_iter_t cell_cbegin() const noexcept {
+    /** @copydoc AbstractModule::cbegin() */
+    cell_iter_t cbegin() const noexcept {
         return cells.cbegin();
     }
-    /** @copydoc AbstractModule::cell_cend() */
-    cell_iter_t cell_cend() const noexcept {
+    /** @copydoc AbstractModule::cend() */
+    cell_iter_t cend() const noexcept {
         return cells.cend();
     }
 
@@ -540,6 +556,21 @@ public:
                 cells.erase(ins_result.first);
             }
         }
+    }
+
+    /**
+     * @brief Updating sum operator computes the formal sum of `this` and `rhs`.
+     *
+     * @param rhs
+     * @return UnorderedSetModule&
+     */
+    UnorderedSetModule& operator+=(UnorderedSetModule&& rhs) {
+        for (citer_t it = rhs.cells.cbegin(); it != rhs.cells.cend();) {
+            // Avoid invalidation of iterator with postincrement.
+            node_t nh = rhs.cells.extract(it++);
+            insert(std::move(nh.value()), one<ring_t>());
+        }
+        return *this;
     }
 
     /** @copydoc AbstractModule::clear() */
@@ -576,6 +607,7 @@ class SetModule
     std::set<T> cells;
     using iter_t = typename std::set<T>::iterator;
     using citer_t = typename std::set<T>::const_iterator;
+    using node_t = typename std::set<T>::node_type;
 
 public:
     /** @copydoc AbstractModule::cell_iter_t */
@@ -584,7 +616,7 @@ public:
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
     using ring_t = typename AbstractModule<T, R, cell_iter_t>::ring_t;
-    /** @copydoc UnorderedSetModule::lfunc_t */
+    /** @brief Linear function type. */
     using lfunc_t = std::function<SetModule<T, R>(const T&)>;
 
     /** @copydoc AbstractModule() */
@@ -597,12 +629,12 @@ public:
         return cells.count(cell) == 0 ? zero<R>() : one<R>();
     }
 
-    /** @copydoc AbstractModule::cell_cbegin() */
-    cell_iter_t cell_cbegin() const noexcept {
+    /** @copydoc AbstractModule::cbegin() */
+    cell_iter_t cbegin() const noexcept {
         return cells.cbegin();
     }
-    /** @copydoc AbstractModule::cell_cend() */
-    cell_iter_t cell_cend() const noexcept {
+    /** @copydoc AbstractModule::cend() */
+    cell_iter_t cend() const noexcept {
         return cells.cend();
     }
 
@@ -623,6 +655,21 @@ public:
                 cells.erase(ins_result.first);
             }
         }
+    }
+
+    /**
+     * @brief Updating sum operator computes the formal sum of `this` and `rhs`.
+     *
+     * @param rhs
+     * @return SetModule&
+     */
+    SetModule& operator+=(SetModule&& rhs) {
+        for (citer_t it = rhs.cells.cbegin(); it != rhs.cells.cend();) {
+            // Avoid invalidation of iterator with postincrement.
+            node_t nh = rhs.cells.extract(it++);
+            insert(std::move(nh.value()), one<ring_t>());
+        }
+        return *this;
     }
 
     /** @copydoc AbstractModule::clear() */
@@ -651,6 +698,7 @@ class UnorderedMapModule
     std::unordered_map<T, R> cells;
     using iter_t = typename std::unordered_map<T, R>::iterator;
     using citer_t = typename std::unordered_map<T, R>::const_iterator;
+    using node_t = typename std::unordered_map<T, R>::node_type;
 
 public:
     /** @copydoc AbstractModule::cell_iter_t */
@@ -659,7 +707,7 @@ public:
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
     using ring_t = typename AbstractModule<T, R, cell_iter_t>::ring_t;
-    /** @copydoc UnorderedSetModule::lfunc_t */
+    /** @brief Linear function type. */
     using lfunc_t = std::function<UnorderedMapModule<T, R>(const T&)>;
 
     /** @copydoc AbstractModule() */
@@ -678,12 +726,12 @@ public:
         }
     }
 
-    /** @copydoc AbstractModule::cell_cbegin() */
-    cell_iter_t cell_cbegin() const noexcept {
+    /** @copydoc AbstractModule::cbegin() */
+    cell_iter_t cbegin() const noexcept {
         return KeyIterator<std::unordered_map<T, R>>(cells.cbegin());
     }
-    /** @copydoc AbstractModule::cell_cend() */
-    cell_iter_t cell_cend() const noexcept {
+    /** @copydoc AbstractModule::cend() */
+    cell_iter_t cend() const noexcept {
         return KeyIterator<std::unordered_map<T, R>>(cells.cend());
     }
 
@@ -714,6 +762,21 @@ public:
         }
     }
 
+    /**
+     * @brief Updating sum operator computes the formal sum of `this` and `rhs`.
+     *
+     * @param rhs
+     * @return UnorderedMapModule&
+     */
+    UnorderedMapModule& operator+=(UnorderedMapModule&& rhs) {
+        for (citer_t it = rhs.cells.cbegin(); it != rhs.cells.cend();) {
+            // Avoid invalidation of iterator with postincrement.
+            node_t nh = rhs.cells.extract(it++);
+            insert(std::move(nh.key()), std::move(nh.mapped()));
+        }
+        return *this;
+    }
+
     /** @copydoc AbstractModule::clear() */
     void clear() {
         cells.clear();
@@ -739,6 +802,7 @@ class MapModule : public AbstractModule<T, R, KeyIterator<std::map<T, R>>> {
     std::map<T, R> cells;
     using iter_t = typename std::map<T, R>::iterator;
     using citer_t = typename std::map<T, R>::const_iterator;
+    using node_t = typename std::map<T, R>::node_type;
 
 public:
     /** @copydoc AbstractModule::cell_iter_t */
@@ -747,7 +811,7 @@ public:
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
     using ring_t = typename AbstractModule<T, R, cell_iter_t>::ring_t;
-    /** @copydoc UnorderdSetModule::lfunc_t */
+    /** @brief Linear function type. */
     using lfunc_t = std::function<MapModule<T, R>(const T&)>;
 
     /** @copydoc AbstractModule() */
@@ -765,12 +829,12 @@ public:
         }
     }
 
-    /** @copydoc AbstractModule::cell_cbegin() */
-    cell_iter_t cell_cbegin() const noexcept {
+    /** @copydoc AbstractModule::cbegin() */
+    cell_iter_t cbegin() const noexcept {
         return KeyIterator<std::map<T, R>>(cells.cbegin());
     }
-    /** @copydoc AbstractModule::cell_cend() */
-    cell_iter_t cell_cend() const noexcept {
+    /** @copydoc AbstractModule::cend() */
+    cell_iter_t cend() const noexcept {
         return KeyIterator<std::map<T, R>>(cells.cend());
     }
 
@@ -799,6 +863,21 @@ public:
                 }
             }
         }
+    }
+
+    /**
+     * @brief Updating sum operator computes the formal sum of `this` and `rhs`.
+     *
+     * @param rhs
+     * @return MapModule&
+     */
+    MapModule& operator+=(MapModule&& rhs) {
+        for (citer_t it = rhs.cells.cbegin(); it != rhs.cells.cend();) {
+            // Avoid invalidation of iterator with postincrement.
+            node_t nh = rhs.cells.extract(it++);
+            insert(std::move(nh.key()), std::move(nh.mapped()));
+        }
+        return *this;
     }
 
     /** @copydoc AbstractModule::clear() */
