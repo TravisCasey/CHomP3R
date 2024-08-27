@@ -9,8 +9,8 @@
  * module.
  */
 
-#ifndef MODULES_H
-#define MODULES_H
+#ifndef CHOMP_MODULES_H
+#define CHOMP_MODULES_H
 
 #include <concepts>
 #include <cstddef>
@@ -933,4 +933,4 @@ struct DefaultModule {
 
 } // namespace chomp::modules
 
-#endif // CHAIN_H
+#endif // CHOMP_MODULES_H

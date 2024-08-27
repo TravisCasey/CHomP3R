@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef RINGS_H
-#define RINGS_H
+#ifndef CHOMP_RINGS_H
+#define CHOMP_RINGS_H
 
 #include <concepts>
 #include <limits>
@@ -192,4 +192,4 @@ public:
 
 } // namespace chomp::modules
 
-#endif // RINGS_H
+#endif // CHOMP_RINGS_H
