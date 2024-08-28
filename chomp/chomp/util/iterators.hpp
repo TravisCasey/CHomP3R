@@ -11,6 +11,7 @@
 #ifndef CHOMP_ITERATORS_H
 #define CHOMP_ITERATORS_H
 
+#include <concepts>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -18,7 +19,8 @@
 namespace chomp::util {
 
 /**
- * @brief Constant iterator wrapper for `std::map` and `std::unordered_map`.
+ * @brief Constant iterator wrapper for associative containers whose iterators
+ * are key, value pairs.
  *
  * This forward iterator only fetches `const`-qualified references to keys from
  * an associative container when dereferenced rather than key, value pairs. This
@@ -26,19 +28,24 @@ namespace chomp::util {
  * `chomp::modules::MapModule` class templates to maintain a consistent
  * interface with the set-based module class implementations.
  *
- * @tparam Container A specialization of `std::map` or `std::unordered_map`
- * class templates.
+ * @tparam I A forward iterator type returning pairs (or tuples) when
+ * dereferenced.
  */
-template <typename Container>
+template <typename I>
+requires std::forward_iterator<I> && requires(I it) {
+    { std::get<0>(*it) } -> std::convertible_to<typename std::tuple_element_t<
+            0, typename std::iterator_traits<I>::value_type>>;
+}
 class KeyIterator {
 
-    typename Container::const_iterator it;
+    I it;
 
 public:
     /** @brief Difference type between iterators. */
-    using difference_type = std::ptrdiff_t;
+    using difference_type = typename std::iterator_traits<I>::difference_type;
     /** @brief Value type when dereferenced. */
-    using value_type = const typename Container::key_type;
+    using value_type = const std::tuple_element_t<
+        0, typename std::iterator_traits<I>::value_type>;
     /** @brief Pointer type. */
     using pointer = value_type*;
     /** @brief Reference type. */
@@ -53,18 +60,17 @@ public:
      */
     KeyIterator() = default;
     /**
-     * @brief Construct a new KeyIterator object using a constant
-     * iterator.
+     * @brief Construct a new KeyIterator object using a passed iterator.
      *
      * @param it
      */
-    KeyIterator(typename Container::const_iterator it) : it(it) {};
+    KeyIterator(I it) : it(it) {};
 
     /**
      * @brief Dereferencing this iterator yields a constant reference to
      * the key in the map.
      *
-     * @return value_type&
+     * @return reference
      */
     reference operator*() const {
         return std::get<0>(*it);

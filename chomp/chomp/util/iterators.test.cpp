@@ -53,18 +53,17 @@ TEMPLATE_LIST_TEST_CASE("KeyIterator functions correctly as a forward iterator",
     key_type key_1 = std::tuple_element_t<3, TestType>();
     mapped_type val_1 = std::tuple_element_t<4, TestType>();
 
-    using I = KeyIterator<Map_t>;
-    CHECK(std::forward_iterator<I>);
-
     Map_t m;
     m[key_0] = val_0;
     m[key_1] = val_1;
 
-    I it(m.cbegin());
+    auto it = KeyIterator(m.cbegin());
+    CHECK(std::forward_iterator<decltype(it)>);
+
     CHECK(m.count(*it) == 1);
     CHECK(it == m.cbegin());
 
-    I temp = it++;
+    auto temp = it++;
     CHECK(temp != it);
     CHECK(temp == m.cbegin());
     CHECK(m.count(*it) == 1);

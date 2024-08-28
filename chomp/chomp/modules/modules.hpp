@@ -694,7 +694,10 @@ public:
  */
 template <Hashable T, Ring R>
 class UnorderedMapModule
-    : public AbstractModule<T, R, KeyIterator<std::unordered_map<T, R>>> {
+    : public AbstractModule<
+          T, R,
+          KeyIterator<typename std::unordered_map<T, R>::const_iterator>> {
+
     std::unordered_map<T, R> cells;
     using iter_t = typename std::unordered_map<T, R>::iterator;
     using citer_t = typename std::unordered_map<T, R>::const_iterator;
@@ -702,7 +705,8 @@ class UnorderedMapModule
 
 public:
     /** @copydoc AbstractModule::cell_iter_t */
-    using cell_iter_t = KeyIterator<std::unordered_map<T, R>>;
+    using cell_iter_t =
+        KeyIterator<typename std::unordered_map<T, R>::const_iterator>;
     /** @copydoc AbstractModule::cell_t */
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
@@ -728,11 +732,11 @@ public:
 
     /** @copydoc AbstractModule::cbegin() */
     cell_iter_t cbegin() const noexcept {
-        return KeyIterator<std::unordered_map<T, R>>(cells.cbegin());
+        return KeyIterator(cells.cbegin());
     }
     /** @copydoc AbstractModule::cend() */
     cell_iter_t cend() const noexcept {
-        return KeyIterator<std::unordered_map<T, R>>(cells.cend());
+        return KeyIterator(cells.cend());
     }
 
     /** @copydoc AbstractModule::insert(const T&, const R&) */
@@ -798,7 +802,10 @@ public:
  * @tparam R Ring type.
  */
 template <Comparable T, Ring R>
-class MapModule : public AbstractModule<T, R, KeyIterator<std::map<T, R>>> {
+class MapModule
+    : public AbstractModule<
+          T, R, KeyIterator<typename std::map<T, R>::const_iterator>> {
+
     std::map<T, R> cells;
     using iter_t = typename std::map<T, R>::iterator;
     using citer_t = typename std::map<T, R>::const_iterator;
@@ -806,7 +813,7 @@ class MapModule : public AbstractModule<T, R, KeyIterator<std::map<T, R>>> {
 
 public:
     /** @copydoc AbstractModule::cell_iter_t */
-    using cell_iter_t = KeyIterator<std::map<T, R>>;
+    using cell_iter_t = KeyIterator<typename std::map<T, R>::const_iterator>;
     /** @copydoc AbstractModule::cell_t */
     using cell_t = typename AbstractModule<T, R, cell_iter_t>::cell_t;
     /** @copydoc AbstractModule::ring_t */
@@ -831,11 +838,11 @@ public:
 
     /** @copydoc AbstractModule::cbegin() */
     cell_iter_t cbegin() const noexcept {
-        return KeyIterator<std::map<T, R>>(cells.cbegin());
+        return KeyIterator(cells.cbegin());
     }
     /** @copydoc AbstractModule::cend() */
     cell_iter_t cend() const noexcept {
-        return KeyIterator<std::map<T, R>>(cells.cend());
+        return KeyIterator(cells.cend());
     }
 
     /** @copydoc AbstractModule::insert(const T&, const R&) */
