@@ -929,6 +929,15 @@ struct DefaultModule {
     using type = typename Chooser<Hashable<T>, BinaryRing<R>, T, R>::type;
 };
 
+/**
+ * @brief Alias for `DefaultModule` chosen type.
+ *
+ * @tparam T Cell type.
+ * @tparam R Ring type.
+ */
+template <CellType T, Ring R>
+using DefaultModule_t = typename DefaultModule<T, R>::type;
+
 } // namespace chomp::modules
 
 #endif // CHOMP_MODULES_H

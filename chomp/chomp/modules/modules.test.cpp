@@ -290,6 +290,7 @@ TEMPLATE_LIST_TEST_CASE("DefaultModule chooses Module type correctly",
     using M = std::tuple_element_t<2, TestType>;
 
     CHECK(std::same_as<typename DefaultModule<T, R>::type, M>);
+    CHECK(std::same_as<DefaultModule_t<T, R>, M>);
 }
 
 } // namespace chomp::modules
