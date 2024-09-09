@@ -14,8 +14,9 @@
 #ifndef CHOMP_ALGEBRA_ALGEBRA_H
 #define CHOMP_ALGEBRA_ALGEBRA_H
 
+#include <chomp/util/concepts.hpp>
+
 #include <concepts>
-#include <cstddef>
 #include <functional>
 #include <iterator>
 #include <type_traits>
@@ -142,36 +143,6 @@ concept BinaryRing = requires {
   requires one<R>() + one<R>() == zero<R>();
 };
 
-/**
- * @brief Types `T` modeling this concept specialize `std::hash<T>` and define
- * the equality operator.
- *
- * Types modeling this concept can be stored in `std::unordered_set` and can be
- * keys in `std::unordered_map`.
- *
- * @tparam T
- */
-template <typename T>
-concept Hashable = requires(T a, T b) {
-  { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
-  { a == b } -> std::same_as<bool>;
-};
-
-/**
- * @brief Types `T` modeling this concept define the `<` operator as well as
- * the equality operator.
- *
- * Types modeling this concept can be stored in `std::set` and can be keys in
- * `std::map`, enabling the use of `SetModule` and `MapModule` with cell type
- * `T`.
- *
- * @tparam T
- */
-template <typename T>
-concept Comparable = requires(T a, T b) {
-  { a < b } -> std::same_as<bool>;
-  { a == b } -> std::same_as<bool>;
-};
 
 /**
  * @brief Types `T` modeling this concept model either `Hashable` or
@@ -180,8 +151,7 @@ concept Comparable = requires(T a, T b) {
  * @tparam T
  */
 template <typename T>
-concept Basis = Hashable<T> || Comparable<T>;
-
+concept Basis = AssociativeKey<T>;
 
 /**
  * @brief Requirements for an iterator type `I` to be a basis iterator for

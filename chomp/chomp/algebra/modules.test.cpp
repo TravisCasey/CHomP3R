@@ -11,6 +11,7 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <functional>
@@ -47,9 +48,12 @@ namespace chomp::core {
 struct ComparableCell {
   int val;
   explicit constexpr ComparableCell(int n) noexcept : val(n) {};
-  constexpr bool operator<(const ComparableCell& rhs) const noexcept {
-    return val < rhs.val;
+
+  constexpr std::strong_ordering operator<=>(const ComparableCell& rhs
+  ) const noexcept {
+    return val <=> rhs.val;
   }
+
   constexpr bool operator==(const ComparableCell& rhs) const noexcept {
     return val == rhs.val;
   }

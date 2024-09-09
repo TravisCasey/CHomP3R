@@ -13,6 +13,7 @@
 #define CHOMP_ALGEBRA_MODULES_H
 
 #include <chomp/algebra/algebra.hpp>
+#include <chomp/util/concepts.hpp>
 #include <chomp/util/iterators.hpp>
 
 #include <concepts>

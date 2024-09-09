@@ -9,7 +9,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
-#include <vector>
 
 #ifndef CHOMP_DOXYGEN
 
@@ -31,27 +30,6 @@ TEST_CASE(
   CHECK(zero<float>() == 0.0);
   CHECK(one<int>() == 1);
   CHECK(one<float>() == 1.0);
-}
-
-TEST_CASE("Hashable concept functions as expected", "[algebra]") {
-  CHECK(Hashable<int>);
-  CHECK(Hashable<std::vector<bool>>);
-  CHECK_FALSE(Hashable<std::vector<int>>);
-  CHECK(Basis<std::vector<int>>);
-}
-
-TEST_CASE("Comparable concept functions as expected", "[algebra]") {
-  struct NonComparable {
-    int val;
-    explicit NonComparable(int n) : val(n) {}
-    bool operator==(const NonComparable& rhs) const {
-      return val == rhs.val;
-    }
-  };
-  CHECK(Comparable<int>);
-  CHECK(Comparable<std::vector<unsigned short>>);
-  CHECK_FALSE(Comparable<NonComparable>);
-  CHECK_FALSE(Basis<NonComparable>);
 }
 
 }  // namespace chomp::core
