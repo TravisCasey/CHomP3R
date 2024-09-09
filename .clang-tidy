@@ -3,7 +3,8 @@ Checks:          'clang-diagnostic-*, clang-analyzer-*, cppcoreguidelines-*, mod
                   llvm-*, misc-*, performance-*, portability-*, -modernize-use-trailing-return-type,
                   -cppcoreguidelines-avoid-magic-numbers, -modernize-use-auto,
                   -cppcoreguidelines-rvalue-reference-param-not-moved, -readability-identifier-length, -llvm-header-guard,
-                  -misc-non-private-member-variables-in-classes'
+                  -misc-non-private-member-variables-in-classes, -bugprone-easily-swappable-parameters,
+                  -cppcoreguidelines-pro-bounds-constant-array-index'
 WarningsAsErrors: true
 FormatStyle:     file
 CheckOptions:
