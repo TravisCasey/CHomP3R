@@ -405,24 +405,16 @@ concept Module = requires(M mod) {
 };
 
 /**
- * @brief Alias for the function type expected by the linear map interface to
+ * @brief Alias for the function expected by the linear map interface to
  * module classes.
  *
- * The return value is a forward iterator that returns basis, coefficient pairs.
- * This avoids forcing allocation of these elements.
+ * These maps take an element of the basis as input and return a new module
+ * element; this can be applied linearly over the corresponding module type.
  *
- * @tparam M Module Type
- * @tparam I Forward iterator yielding basis, coefficient pairs which are the
- * result of the function.
- *
- * @sa linear_apply()
+ * @tparam M Module type.
  */
-template <typename M, typename I>
-requires Module<M> && std::forward_iterator<I> &&
-             std::convertible_to<
-                 std::iter_value_t<I>,
-                 std::pair<typename M::BasisType, typename M::RingType>>
-using LinearMap = std::function<std::pair<I, I>(const typename M::BasisType&)>;
+template <Module M>
+using LinearMap = std::function<M(const typename M::BasisType&)>;
 
 /**
  * @brief Apply the linear map `func` to each the module element `elem`.
@@ -436,24 +428,12 @@ using LinearMap = std::function<std::pair<I, I>(const typename M::BasisType&)>;
  *
  * @sa LinearMap
  */
-template <Module M, std::forward_iterator I>
-[[nodiscard]] M linear_apply(const M& elem, const LinearMap<M, I>& func) {
+template <Module M>
+[[nodiscard]] M linear_apply(const M& elem, const LinearMap<M>& func) {
   M result;
-  typename M::RingType coef;
-  I begin_it, end_it;
-
-  // Apply func to each basis element in elem; multiply the coefficients of the
-  // result by the cells coefficient and insert into a new element.
   for (const typename M::BasisType& cell : elem) {
-    coef = elem[cell];
-    for (std::tie(begin_it, end_it) = func(cell); begin_it != end_it;
-         begin_it++) {
-      result.insert(
-          std::move(begin_it->first), coef * std::move(begin_it->second)
-      );
-    }
+    result += elem[cell] * func(cell);
   }
-
   return result;
 }
 

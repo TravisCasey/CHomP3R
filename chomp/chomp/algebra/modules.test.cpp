@@ -140,15 +140,13 @@ TEMPLATE_LIST_TEST_CASE(
   T cell_1 = std::tuple_element_t<2, TestType>();
   M elem_0;
 
-  std::vector<std::pair<T, R>> result;
-  LinearMap<M, typename std::vector<std::pair<T, R>>::iterator> lfunc =
-      [&](const T& cell) {
-        result.clear();
-        result.push_back(std::make_pair(cell, one<R>()));
-        result.push_back(std::make_pair(cell_0, zero<R>()));
-        result.push_back(std::make_pair(cell_1, one<R>()));
-        return std::make_pair(result.begin(), result.end());
-      };
+  LinearMap<M> lfunc = [&](const T& cell) {
+    M result;
+    result.insert(cell, one<R>());
+    result.insert(cell_0, zero<R>());
+    result.insert(cell_1, one<R>());
+    return result;
+  };
 
   M elem_1 = linear_apply(elem_0, lfunc);
   REQUIRE(elem_0[cell_0] == zero<R>());
