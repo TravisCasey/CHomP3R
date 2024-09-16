@@ -420,16 +420,17 @@ using LinearMap = std::function<M(const typename M::BasisType&)>;
  * @brief Apply the linear map `func` to each the module element `elem`.
  *
  * @tparam M Module Type
- * @tparam I Iterator type returned (as a begin, end pair) from `func`.
+ * @tparam F Function object type; must be convertible to `LinearMap<M>`.
  * @param elem Input module element.
  * @param func Linear map to apply to `elem`.
  * @return M A new module element that is the result of `func` applied to
  * `elem`.
  *
- * @sa LinearMap
+ * @sa `LinearMap`
  */
-template <Module M>
-[[nodiscard]] M linear_apply(const M& elem, const LinearMap<M>& func) {
+template <Module M, typename F>
+requires std::convertible_to<F, LinearMap<M>>
+[[nodiscard]] M linear_apply(const M& elem, const F& func) {
   M result;
   for (const typename M::BasisType& cell : elem) {
     result += elem[cell] * func(cell);
