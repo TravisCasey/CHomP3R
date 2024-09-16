@@ -251,6 +251,7 @@ public:
    * @return OutputType Result of the function call; may be from the cache.
    */
   template <typename InFor>
+  requires std::same_as<std::remove_cvref_t<InFor>, InputType>
   OutputType operator()(InFor&& input) {
     return cache[std::forward<InFor>(input)];
   }
