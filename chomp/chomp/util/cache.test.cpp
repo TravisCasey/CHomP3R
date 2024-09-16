@@ -77,6 +77,23 @@ TEMPLATE_LIST_TEST_CASE(
   REQUIRE_FALSE(c.contains(2));
 }
 
+TEST_CASE("CachedFunctionWrapper functions correctly", "[util]") {
+  CachedFunctionWrapper<int, int> wrapped_func(
+      [](int input) -> int {
+        return input << 2;
+      },
+      4
+  );
+
+  REQUIRE(wrapped_func(0) == 0);
+  REQUIRE(wrapped_func(0) == 0);
+  REQUIRE(wrapped_func(1) == 4);
+  REQUIRE(wrapped_func(2) == 8);
+  REQUIRE(wrapped_func(3) == 12);
+  REQUIRE(wrapped_func(4) == 16);
+  REQUIRE(wrapped_func(0) == 0);
+}
+
 }  // namespace chomp::core
 
 #endif  // CHOMP_DOXYGEN

@@ -240,6 +240,59 @@ public:
   }
 };
 
+/**
+ * @brief Function wrapper that caches results using `LRUCache`.
+ *
+ * @tparam In The input type to the wrapped function is `const In&`. The type
+ * `In` must model `AssociativeKey` so that it may be used as a key in
+ * `LRUCache`.
+ * @tparam Out The output type of the function.
+ * @tparam MapType The type of map used for `LRUCache`; `std::unordered_map` if
+ * `In` is hashable else `std::map`.
+ *
+ * @sa `LRUCache`
+ */
+template <
+    AssociativeKey In, typename Out,
+    template <typename...> typename MapType = DefaultCacheMap>
+class CachedFunctionWrapper {
+private:
+  LRUCache<In, Out, MapType> cache;
+
+public:
+  /** @brief Input type to wrapped function is `const InputType&`. */
+  using InputType = In;
+  /** @brief Output type of the wrapped function. */
+  using OutputType = Out;
+  /** @brief Wrapped function type. */
+  using FunctionType = std::function<OutputType(const InputType&)>;
+
+  /**
+   * @brief Construct `CachedFunctionWrapper` by providing a function to be
+   * wrapped and a maximum cache size.
+   *
+   * @param wrapped_function Function to be wrapped.
+   * @param cache_max_size Maximum cache size.
+   */
+  CachedFunctionWrapper(
+      FunctionType wrapped_function, std::size_t cache_max_size
+  ) : cache(wrapped_function, cache_max_size) {}
+
+  /**
+   * @brief Evaluate the wrapped function using the cache. If the result is not
+   * present in the cache, it is added; else, it is moved to the front.
+   *
+   * @tparam InFor Forwarding type for input; either a possibly cv-qualified
+   * lvalue or rvalue reference of input type to the wrapped function.
+   * @param input Input to the function call.
+   * @return OutputType Result of the function call; may be from the cache.
+   */
+  template <typename InFor>
+  OutputType operator()(InFor&& input) {
+    return cache[std::forward<InFor>(input)];
+  }
+};
+
 }  // namespace chomp::core
 
 #endif  // CHOMP_UTIL_CACHE_H
