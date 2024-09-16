@@ -9,25 +9,12 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <concepts>
 #include <map>
 #include <tuple>
-#include <unordered_map>
-#include <vector>
 
 #ifndef CHOMP_DOXYGEN
 
 namespace chomp::core {
-
-TEST_CASE("DefaultCacheMap chooses correctly", "[util]") {
-  // int is hashable but std::vector<int> is not
-  CHECK(std::same_as<
-        DefaultCacheMap<int, std::vector<int>>,
-        std::unordered_map<int, std::vector<int>>>);
-  CHECK(std::same_as<
-        DefaultCacheMap<std::vector<int>, int>,
-        std::map<std::vector<int>, int>>);
-}
 
 using CacheTypes = std::tuple<LRUCache<int, int>, LRUCache<int, int, std::map>>;
 

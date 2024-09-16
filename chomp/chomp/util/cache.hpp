@@ -5,8 +5,8 @@
  */
 
 /** @file
- * @brief This header contains a LRU cache implementation specialized for memory
- * efficiency in CHomP3R data structures.
+ * @brief This header contains an LRU cache implementation specialized for
+ * memory efficiency in CHomP3R data structures.
  */
 
 #ifndef CHOMP_UTIL_CACHE_H
@@ -18,47 +18,10 @@
 #include <cstddef>
 #include <functional>
 #include <list>
-#include <map>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 
 namespace chomp::core {
-
-#ifndef CHOMP_DOXYGEN
-namespace detail {
-
-template <bool H, typename K, typename V>
-struct CacheMapChooser {
-  using type = std::map<K, V>;
-};
-
-template <typename K, typename V>
-struct CacheMapChooser<true, K, V> {
-  using type = std::unordered_map<K, V>;
-};
-
-template <AssociativeKey K, typename V>
-struct DefaultCacheMapChooser {
-  using type = typename CacheMapChooser<Hashable<K>, K, V>::type;
-};
-
-}  // namespace detail
-#endif  // CHOMP_DOXYGEN
-
-/**
- * @brief Default choice between `std::map` and `std::unordered_map` depending
- * on concepts fulfilled by `K`.
- *
- * If `K` has a `std::hash` specialization, `std::unordered_map` is preferred.
- * Otherwise, uses `std::map`.
- *
- * @tparam K Key type.
- * @tparam V Value type.
- */
-template <AssociativeKey K, typename V>
-using DefaultCacheMap = typename detail::DefaultCacheMapChooser<K, V>::type;
-
 
 /**
  * @brief A specialized LRU cache data structure designed for memory efficiency
@@ -75,7 +38,7 @@ using DefaultCacheMap = typename detail::DefaultCacheMapChooser<K, V>::type;
  */
 template <
     AssociativeKey K, typename V,
-    template <typename...> typename MapType = DefaultCacheMap>
+    template <typename...> typename MapType = DefaultMap>
 class LRUCache {
 private:
   std::list<std::pair<K, V>> cache_list;
@@ -254,7 +217,7 @@ public:
  */
 template <
     AssociativeKey In, typename Out,
-    template <typename...> typename MapType = DefaultCacheMap>
+    template <typename...> typename MapType = DefaultMap>
 class CachedFunctionWrapper {
 private:
   LRUCache<In, Out, MapType> cache;
