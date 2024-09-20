@@ -20,9 +20,24 @@
 #include <chomp/util/constants.hpp>
 
 #include <concepts>
+#include <cstddef>
 #include <functional>
 
 namespace chomp::core {
+
+/**
+ * @brief Requirements on a class implementing a cell in a chain complex.
+ *
+ * Notably, it must model `Basis` for the purpose of being the basis in a class
+ * modeling `Module` as well as have a `dimension` method assigning it to the
+ * dimension of the chain group in which it belongs.
+ *
+ * @tparam C Cell type.
+ */
+template <typename C>
+concept Cellular = Basis<C> && requires(const C cell) {
+  { cell.dimension() } -> std::convertible_to<std::size_t>;
+};
 
 /**
  * @brief Alias for the function object type used as test conditions in the
@@ -49,7 +64,7 @@ concept ChainComplex = requires(
     const ConditionalType<typename CC::CellType> cond
 ) {
   Ring<typename CC::RingType>;
-  Basis<typename CC::CellType>;
+  Cellular<typename CC::CellType>;
   Module<typename CC::ChainType>;
   Grading<typename CC::GradingType>;
 

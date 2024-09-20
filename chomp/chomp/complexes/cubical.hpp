@@ -20,6 +20,7 @@
 #include <chomp/util/constants.hpp>
 
 #include <array>
+#include <bit>
 #include <compare>
 #include <concepts>
 #include <cstddef>
@@ -44,7 +45,8 @@ using CubeOrthant = std::array<HypercubeCoordinate, CCDIM>;
  *
  * Importantly, the `CCDIM` template parameter is the dimension of the ambient
  * space in which the associated cubical complex (and this cube) is embedded;
- * this is not the dimension of the cube as a cell of that complex.
+ * this is not the dimension of the cube as a cell of that complex. The
+ * dimension of the cube itself is accessible via the `dimension` method.
  *
  * Each cube comprises an orthant (see `CubeOrthant`) and a shape integer that
  * has each bit 1 or 0 depending if the cube has extent along the corresponding
@@ -61,22 +63,50 @@ class Cube {
 private:
   CubeOrthant<CCDIM> cube_orthant;
   std::size_t cube_extent;
+  std::size_t cube_dimension;
 
 public:
   /**
-   * @brief Initialize a `Cube` instance by providing an orthant and an extent
-   * parameter.
+   * @brief Initialize a `Cube` instance by providing an orthant, an extent
+   * parameter and a dimension parameter.
    *
    * @param cube_orthant Location of the orthant this cube is in.
-   * @param cube_extent Shape of this cube with each bit 1 or 0 depending on
-   * if the cube has extent along the corresponding axis.
+   * @param cube_extent Shape of this cube with each bit 1 or 0 depending on if
+   * the cube has extent along the corresponding axis.
+   * @param cube_dimension The dimension of the cube, equivalent to the number
+   * of axes in which it has nontrivial extent.
+   */
+  Cube(
+      const CubeOrthant<CCDIM>& cube_orthant, std::size_t cube_extent,
+      std::size_t cube_dimension
+  ) :
+      cube_orthant(cube_orthant), cube_extent(cube_extent),
+      cube_dimension(cube_dimension) {}
+  /**
+   * @copybrief Cube(const CubeOrthant<CCDIM>&, std::size_t, std::size_t)
+   *
+   * In this overload, the dimension is not supplied but instead computed from
+   * `cube_extent` by `std::popcount`. It is preferable to pass the dimension
+   * of the cell when known (such as from a boundary operator).
+   *
+   * @param cube_orthant Location of the orthant this cube is in.
+   * @param cube_extent Shape of this cube with each bit 1 or 0 depending on if
+   * the cube has extent along the corresponding axis.
    */
   Cube(const CubeOrthant<CCDIM>& cube_orthant, std::size_t cube_extent) :
-      cube_orthant(cube_orthant), cube_extent(cube_extent) {}
-
-  /** @copydoc Cube() */
+      cube_orthant(cube_orthant), cube_extent(cube_extent),
+      cube_dimension(std::popcount(cube_extent)) {}
+  /** @copydoc Cube(const CubeOrthant<CCDIM>&, std::size_t, std::size_t) */
+  Cube(
+      CubeOrthant<CCDIM>&& cube_orthant, std::size_t cube_extent,
+      std::size_t cube_dimension
+  ) :
+      cube_orthant(std::move(cube_orthant)), cube_extent(cube_extent),
+      cube_dimension(cube_dimension) {}
+  /** @copydoc Cube(const CubeOrthant<CCDIM>&, std::size_t) */
   Cube(CubeOrthant<CCDIM>&& cube_orthant, std::size_t cube_extent) :
-      cube_orthant(std::move(cube_orthant)), cube_extent(cube_extent) {}
+      cube_orthant(std::move(cube_orthant)), cube_extent(cube_extent),
+      cube_dimension(std::popcount(cube_extent)) {}
 
   /**
    * @brief Get the orthant of this cube.
@@ -94,6 +124,16 @@ public:
    */
   [[nodiscard]] std::size_t extent() const noexcept {
     return cube_extent;
+  }
+
+  /**
+   * @brief Get the dimension of the cube; this is the dimension of the chain
+   * group in which it belongs, not the ambient dimension of the space.
+   *
+   * @return std::size_t
+   */
+  [[nodiscard]] std::size_t dimension() const noexcept {
+    return cube_dimension;
   }
 
   /**
@@ -119,12 +159,14 @@ public:
    */
   [[nodiscard]] std::strong_ordering operator<=>(const Cube& rhs
   ) const noexcept {
-    if (cube_orthant < rhs.cube_orthant ||
-        (cube_orthant == rhs.cube_orthant && cube_extent < rhs.cube_extent)) {
+    if (cube_dimension < rhs.cube_dimension ||
+        (cube_dimension == rhs.cube_dimension && cube_orthant < rhs.cube_orthant
+        )) {
       return std::strong_ordering::less;
     }
-    if (cube_orthant > rhs.cube_orthant ||
-        (cube_orthant == rhs.cube_orthant && cube_extent > rhs.cube_extent)) {
+    if (cube_dimension > rhs.cube_dimension ||
+        (cube_dimension == rhs.cube_dimension && cube_orthant > rhs.cube_orthant
+        )) {
       return std::strong_ordering::greater;
     }
     return std::strong_ordering::equivalent;
@@ -311,8 +353,13 @@ public:
   [[nodiscard]] ChainType
   boundary_if(const CellType& cell, const ConditionalType<CellType>& cond) {
     // Implementation follows `Computational Homology` Kaczynski et al.
+    if (cell.dimension() == 0) {
+      return ChainType();
+    }
+
     const CubeOrthant<CCDIM>& cube_orthant = cell.orthant();
     const std::size_t cube_extent = cell.extent();
+    const std::size_t new_dimension = cell.dimension() - 1;
     std::size_t axis_bit = 1;
     RingType coef = one<RingType>();  // axes with extent negate the coefficient
     ChainType result;
@@ -327,14 +374,16 @@ public:
         if (cube_orthant[axis] != maximum_orthant[axis]) {
           CubeOrthant<CCDIM> new_orthant = cube_orthant;
           new_orthant[axis] += 1;
-          Cube<CCDIM> outer_cell(std::move(new_orthant), new_extent);
+          Cube<CCDIM> outer_cell(
+              std::move(new_orthant), new_extent, new_dimension
+          );
           if (cond(outer_cell)) {
             result.insert(outer_cell, coef);
           }
         }
 
         // Always inner cells
-        Cube<CCDIM> inner_cell(cube_orthant, new_extent);
+        Cube<CCDIM> inner_cell(cube_orthant, new_extent, new_dimension);
         if (cond(inner_cell)) {
           result.insert(inner_cell, -coef);
         }
@@ -361,8 +410,13 @@ public:
    */
   [[nodiscard]] ChainType
   coboundary_if(const CellType& cell, const ConditionalType<CellType>& cond) {
+    if (cell.dimension() == CCDIM) {
+      return ChainType();
+    }
+
     const CubeOrthant<CCDIM>& cube_orthant = cell.orthant();
     const std::size_t cube_extent = cell.extent();
+    const std::size_t new_dimension = cell.dimension() + 1;
     std::size_t axis_bit = 1;
     RingType coef = one<RingType>();
     ChainType result;
@@ -377,14 +431,16 @@ public:
         if (cube_orthant[axis] != minimum_orthant[axis]) {
           CubeOrthant<CCDIM> new_orthant = cube_orthant;
           new_orthant[axis] -= 1;
-          Cube<CCDIM> inner_cell(std::move(new_orthant), new_extent);
+          Cube<CCDIM> inner_cell(
+              std::move(new_orthant), new_extent, new_dimension
+          );
           if (cond(inner_cell)) {
             result.insert(inner_cell, coef);
           }
         }
 
         // Always outer cells
-        Cube<CCDIM> outer_cell(cube_orthant, new_extent);
+        Cube<CCDIM> outer_cell(cube_orthant, new_extent, new_dimension);
         if (cond(outer_cell)) {
           result.insert(outer_cell, -coef);
         }
