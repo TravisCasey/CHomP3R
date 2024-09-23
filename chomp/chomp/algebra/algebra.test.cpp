@@ -8,6 +8,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <stdexcept>
 #include <string>
 
 #ifndef CHOMP_DOXYGEN
@@ -30,6 +31,15 @@ TEST_CASE(
   CHECK(zero<float>() == 0.0);
   CHECK(one<int>() == 1);
   CHECK(one<float>() == 1.0);
+}
+
+TEST_CASE("Inverse functions on fundamental types", "[algebra]") {
+  CHECK_THROWS_AS(invert(0.0), std::domain_error);
+  CHECK_THROWS_AS(invert(static_cast<int>(0)), std::domain_error);
+  CHECK(invert(static_cast<int>(1)) == static_cast<int>(1));
+  CHECK(invert(static_cast<int>(-1)) == static_cast<int>(-1));
+  CHECK_THROWS_AS(invert(static_cast<unsigned int>(-1)), std::domain_error);
+  CHECK(invert(static_cast<unsigned int>(1)) == static_cast<unsigned int>(1));
 }
 
 }  // namespace chomp::core

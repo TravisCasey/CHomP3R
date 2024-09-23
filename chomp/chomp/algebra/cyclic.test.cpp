@@ -9,6 +9,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <stdexcept>
+
 #ifndef CHOMP_DOXYGEN
 
 namespace chomp::core {
@@ -21,7 +23,7 @@ TEST_CASE("BinaryRing concept on Z", "[algebra]") {
 TEST_CASE("Ring identify functions work correctly", "[algebra]") {
   CHECK(zero<Z<13>>().rep() == 0);
   CHECK(zero<Z<2>>().rep() == 0);
-  CHECK(one<Z<22>>().rep() == 1);
+  CHECK(one<Z<23>>().rep() == 1);
   CHECK(one<Z<2>>().rep() == 1);
 }
 
@@ -33,11 +35,11 @@ TEST_CASE("Comparison operators of Z work as intended", "[algebra]") {
 }
 
 TEST_CASE("Arithmetic operators of Z work as intended", "[algebra]") {
-  CHECK(-Z<14>(9) == Z<14>(5));
+  CHECK(-Z<17>(9) == Z<17>(8));
   CHECK(-Z<2>(9) == Z<2>(9));
 
-  CHECK(Z<10>(4) + Z<10>(28) == Z<10>(4 + 28));
-  CHECK(Z<12>(11) - Z<12>(1) == Z<12>(11 - 1));
+  CHECK(Z<11>(4) + Z<11>(28) == Z<11>(4 + 28));
+  CHECK(Z<13>(11) - Z<13>(1) == Z<13>(11 - 1));
   CHECK(Z<2>(1) * Z<2>(2) == Z<2>(1 * 2));
 
   Z<5> a(0);
@@ -47,6 +49,22 @@ TEST_CASE("Arithmetic operators of Z work as intended", "[algebra]") {
   REQUIRE(a.rep() == 3);
   a *= Z<5>(2);
   REQUIRE(a.rep() == 1);
+}
+
+TEST_CASE("Inverses in Z", "[algebra]") {
+  CHECK_FALSE(invertible(Z<2>(2)));
+  CHECK_FALSE(invertible(Z<3>(3)));
+  CHECK(invertible(Z<2>(3)));
+  CHECK(invertible(Z<3>(2)));
+
+  CHECK_THROWS_AS(invert(Z<2>(0)), std::domain_error);
+  CHECK_THROWS_AS(invert(Z<19>(-19)), std::domain_error);
+
+  CHECK(invert(Z<2>(3)) == Z<2>(3));
+  CHECK(invert(Z<5>(1)) == Z<5>(1));
+  CHECK(invert(Z<5>(2)) == Z<5>(3));
+  CHECK(invert(Z<5>(3)) == Z<5>(2));
+  CHECK(invert(Z<5>(4)) == Z<5>(4));
 }
 
 }  // namespace chomp::core

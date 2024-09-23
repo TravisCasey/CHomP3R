@@ -11,12 +11,16 @@
 #ifndef CHOMP_ALGEBRA_CYCLIC_H
 #define CHOMP_ALGEBRA_CYCLIC_H
 
+#include <chomp/algebra/algebra.hpp>
+
+#include <concepts>
 #include <limits>
+#include <stdexcept>
 
 namespace chomp::core {
 
 /**
- * @brief The cyclic ring of integers modulo `p`.
+ * @brief The cyclic ring of integers modulo a prime `p`.
  *
  * Instantiations of this class template are representatives of the equivalence
  * classes modulo `p`, with representative in `[0, p-1]`.
@@ -42,7 +46,11 @@ public:
    *
    * @param n
    */
-  constexpr explicit Z(int n = 0) : value(n >= 0 ? n % p : n % p + p) {}
+  constexpr explicit Z(int n = 0) : value(n % p) {
+    if (value < 0) {
+      value += p;
+    }
+  }
   // % operator truncates towards zero
 
   /**
@@ -151,6 +159,35 @@ public:
   constexpr Z& operator*=(const Z& rhs) noexcept {
     value = (value * rhs.value) % p;  // safe as p * p <= max(int)
     return *this;
+  }
+
+  /**
+   * @brief Invert the element in `Z`. Throws `std::domain_error` if the element
+   * is zero.
+   *
+   * @return Z
+   */
+  [[nodiscard]] Z invert() const {
+    if (value == 0) {
+      throw std::domain_error(
+          "Attempted to invert a ring element that is not a unit."
+      );
+    }
+
+    // Exponentiation by squaring is safe as all values are less than p * p
+    int exponent = p - 2;
+    Z result = Z(1);
+    Z temp(*this);
+
+    while (exponent > 0) {
+      if (exponent % 2 == 1) {
+        result *= temp;
+      }
+      temp *= temp;
+      exponent /= 2;
+    }
+
+    return result;
   }
 };
 
@@ -274,7 +311,31 @@ public:
     odd = rhs.odd ? odd : false;
     return *this;
   }
+
+  /**
+   * @brief Invert the element in `Z`. Throws `std::domain_error` if the element
+   * is zero.
+   *
+   * @return Z
+   */
+  [[nodiscard]] Z invert() const {
+    if (odd) {
+      return *this;
+    }
+    throw std::domain_error(
+        "Attempted to invert a ring element that is not a unit."
+    );
+  }
 };
+
+/** @overload */
+template <typename R>
+requires Ring<R> && requires(const R& r) {
+  { r.invert() } -> std::convertible_to<R>;
+}
+[[nodiscard]] R invert(const R& value) {
+  return value.invert();
+}
 
 }  // namespace chomp::core
 

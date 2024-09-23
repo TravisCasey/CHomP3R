@@ -19,6 +19,7 @@
 #include <concepts>
 #include <functional>
 #include <iterator>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -143,6 +144,82 @@ concept BinaryRing = requires {
   requires one<R>() + one<R>() == zero<R>();
 };
 
+/**
+ * @brief Return the multiplicative inverse of `value` in `R`, should it exist.
+ * Throws `std::domain_error` otherwise.
+ *
+ * The `invertible` function is a safe way to check for invertibility first.
+ *
+ * @tparam R
+ * @param value
+ * @return R
+ */
+template <Ring R>
+[[nodiscard]] R invert(const R& value) {
+  if (value == zero<R>()) {
+    throw std::domain_error(
+        "Attempted to invert a ring element that is not a unit."
+    );
+  }
+  return one<R>() / value;
+}
+/** @overload */
+template <typename R>
+requires Ring<R> && std::unsigned_integral<R>
+[[nodiscard]] R invert(const R& value) {
+  if (value == one<R>()) {
+    return one<R>();
+  }
+  throw std::domain_error(
+      "Attempted to invert a ring element that is not a unit."
+  );
+}
+/** @overload */
+template <typename R>
+requires Ring<R> && std::signed_integral<R>
+[[nodiscard]] R invert(const R& value) {
+  if (value == one<R>()) {
+    return one<R>();
+  }
+  if (value == -one<R>()) {
+    return -one<R>();
+  }
+  throw std::domain_error(
+      "Attempted to invert a ring element that is not a unit."
+  );
+}
+
+/**
+ * @brief Check invertibility of `value` in `R`. If the result is `true`, the
+ * `invert` function should correctly return when called on `value`.
+ *
+ * Note that floating point types are treated as invertible unless they equal
+ * zero; unsigned integral are treated as invertible only at 1 while signed
+ * integral are treated as invertible at -1 and 1. There may be inconsistencies
+ * with this behavior, and it may be preferable to define custom ring types or
+ * use the cyclic rings `Z<p>`.
+ *
+ * @tparam R
+ * @param value
+ * @return true
+ * @return false
+ */
+template <Ring R>
+[[nodiscard]] bool invertible(const R& value) {
+  return value != zero<R>();
+}
+/** @overload */
+template <typename R>
+requires Ring<R> && std::unsigned_integral<R>
+[[nodiscard]] bool invertible(const R& value) {
+  return value == one<R>();
+}
+/** @overload */
+template <typename R>
+requires Ring<R> && std::signed_integral<R>
+[[nodiscard]] bool invertible(const R& value) {
+  return value == one<R>() || value == -one<R>();
+}
 
 /**
  * @brief Types `T` modeling this concept model either `Hashable` or
