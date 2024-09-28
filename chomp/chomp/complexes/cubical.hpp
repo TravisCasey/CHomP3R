@@ -245,6 +245,8 @@ public:
   using ChainType = M;
   /** @brief Grading function object type. */
   using GradingType = G;
+  /** @brief Ambient dimension in which the complex is embedded. */
+  static constexpr std::size_t dimension = CCDIM;
 
   /**
    * @brief Initialize a new cubical complex with a maximum orthant and the

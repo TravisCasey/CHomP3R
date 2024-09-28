@@ -44,6 +44,7 @@ TEST_CASE(
   CubicalComplex<3, decltype(grading_func), Z<5>> complex(
       CubeOrthant<3>{2, 4, 5}, std::move(grading_func)
   );
+  REQUIRE(decltype(complex)::dimension == 3);
   using TestChainType = typename decltype(complex)::ChainType;
   REQUIRE(std::same_as<TestChainType, UnorderedMapModule<Cube<3>, Z<5>>>);
   REQUIRE(complex.minimum() == CubeOrthant<3>({0, 0, 0}));
