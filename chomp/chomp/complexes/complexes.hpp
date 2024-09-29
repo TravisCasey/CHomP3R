@@ -29,15 +29,12 @@ namespace chomp::core {
  * @brief Requirements on a class implementing a cell in a chain complex.
  *
  * Notably, it must model `Basis` for the purpose of being the basis in a class
- * modeling `Module` as well as have a `dimension` method assigning it to the
- * dimension of the chain group in which it belongs.
+ * modeling `Module`.
  *
  * @tparam C Cell type.
  */
 template <typename C>
-concept Cellular = Basis<C> && requires(const C cell) {
-  { cell.dimension() } -> std::convertible_to<std::size_t>;
-};
+concept Cellular = Basis<C>;
 
 /**
  * @brief Alias for the function object type used as test conditions in the
