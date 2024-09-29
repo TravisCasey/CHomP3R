@@ -20,8 +20,9 @@
 #include <chomp/util/constants.hpp>
 
 #include <concepts>
-#include <cstddef>
 #include <functional>
+#include <iterator>
+#include <type_traits>
 
 namespace chomp::core {
 
@@ -34,7 +35,7 @@ namespace chomp::core {
  * @tparam C Cell type.
  */
 template <typename C>
-concept Cellular = Basis<C>;
+concept Cellular = std::regular<C> && Basis<C>;
 
 /**
  * @brief Alias for the function object type used as test conditions in the
@@ -58,12 +59,19 @@ using ConditionalType = std::function<bool(const C&)>;
 template <typename CC>
 concept ChainComplex = requires(
     CC complex, const typename CC::CellType cell,
-    const ConditionalType<typename CC::CellType> cond
+    const ConditionalType<typename CC::CellType> cond,
+    typename CC::CellIterType it
 ) {
-  Ring<typename CC::RingType>;
-  Cellular<typename CC::CellType>;
-  Module<typename CC::ChainType>;
-  Grading<typename CC::GradingType>;
+  requires Ring<typename CC::RingType>;
+  requires Cellular<typename CC::CellType>;
+  requires Module<typename CC::ChainType>;
+  requires Grading<typename CC::GradingType>;
+  requires std::forward_iterator<typename CC::CellIterType>;
+  requires std::same_as<
+      std::remove_cvref_t<
+          typename std::iterator_traits<typename CC::CellIterType>::value_type>,
+      typename CC::CellType>;
+
 
   { complex.grade(cell) } -> std::convertible_to<GradingResultType>;
   {
@@ -72,6 +80,9 @@ concept ChainComplex = requires(
   {
     complex.coboundary_if(cell, cond)
   } -> std::convertible_to<typename CC::ChainType>;
+  { complex.begin() } -> std::convertible_to<typename CC::CellIterType>;
+  { complex.end() } -> std::convertible_to<typename CC::CellIterType>;
+  { *it } -> std::convertible_to<typename CC::CellType>;
 };
 
 /**

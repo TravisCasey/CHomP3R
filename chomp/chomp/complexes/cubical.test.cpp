@@ -10,11 +10,13 @@
 #include <chomp/complexes/complexes.hpp>
 #include <chomp/complexes/cubical.hpp>
 #include <chomp/complexes/grading.hpp>
+#include <chomp/util/constants.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <concepts>
 #include <initializer_list>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -177,6 +179,55 @@ TEST_CASE(
 
   // Check that coboundary of coboundary is empty
   REQUIRE(coboundary(complex, coboundary_result) == TestChainType());
+}
+
+TEST_CASE("LexOrthantIterator behaves correctly.", "[complexes]") {
+  LexOrthantIterator<4> it({0, -1, -1, -2}, {2, 1, 4, -2}, {1, 1, 1, -2});
+  LexOrthantIterator<4> end_it({0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, true);
+
+  CHECK(it != end_it);
+  CHECK(*it == CubeOrthant<4>({1, 1, 1, -2}));
+  ++it;
+  CHECK(*it == CubeOrthant<4>({2, 1, 1, -2}));
+  CHECK(*(it++) == CubeOrthant<4>({2, 1, 1, -2}));
+  CHECK(*it == CubeOrthant<4>({0, -1, 2, -2}));
+
+  for (int i = 0; i < 26; ++i) {
+    ++it;
+    CHECK(it != end_it);
+  }
+  ++it;
+  CHECK(it == end_it);
+}
+
+TEST_CASE("Cubical complex cell iteration", "[complexes]") {
+  const struct {
+    using InputType = Cube<2>;
+    GradingResultType operator()([[maybe_unused]] const InputType& cell
+    ) const noexcept {
+      return 0;
+    }
+  } grading_func;
+  const CubicalComplex<2, decltype(grading_func), Z<2>> complex(
+      {-2, 1}, {0, 2}, grading_func
+  );
+
+  std::set<Cube<2>> cube_set;
+  std::set<Cube<2>> result_set(
+      {Cube<2>({-2, 1}, 0), Cube<2>({-2, 1}, 1), Cube<2>({-2, 1}, 2),
+       Cube<2>({-2, 1}, 3), Cube<2>({-1, 1}, 0), Cube<2>({-1, 1}, 1),
+       Cube<2>({-1, 1}, 2), Cube<2>({-1, 1}, 3), Cube<2>({0, 1}, 0),
+       Cube<2>({0, 1}, 1),  Cube<2>({0, 1}, 2),  Cube<2>({0, 1}, 3),
+       Cube<2>({-2, 2}, 0), Cube<2>({-2, 2}, 1), Cube<2>({-2, 2}, 2),
+       Cube<2>({-2, 2}, 3), Cube<2>({-1, 2}, 0), Cube<2>({-1, 2}, 1),
+       Cube<2>({-1, 2}, 2), Cube<2>({-1, 2}, 3), Cube<2>({0, 2}, 0),
+       Cube<2>({0, 2}, 1),  Cube<2>({0, 2}, 2),  Cube<2>({0, 2}, 3)}
+  );
+  for (const Cube<2>& cell : complex) {
+    cube_set.insert(cell);
+  }
+  CHECK(cube_set.size() == 24);
+  CHECK(cube_set == result_set);
 }
 
 

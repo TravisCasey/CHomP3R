@@ -19,13 +19,14 @@
 #include <chomp/complexes/grading.hpp>
 #include <chomp/util/constants.hpp>
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <compare>
 #include <concepts>
 #include <cstddef>
 #include <functional>
-
+#include <iterator>
 
 namespace chomp::core {
 
@@ -65,6 +66,8 @@ private:
   std::size_t cube_extent;
 
 public:
+  /** @brief Default initialize a `Cube` object. */
+  Cube() = default;
   /**
    * @brief Initialize a `Cube` instance by providing an orthant and an extent
    * parameter.
@@ -171,6 +174,217 @@ struct hash<chomp::core::Cube<CCDIM>> {
 namespace chomp::core {
 
 /**
+ * @brief An iterator over all cubes in the hypercubical grid.
+ *
+ * This iterator functions by wrapping an iterator over the orthants, then
+ * iterating over each cube in each orthant.
+ *
+ * This is used for cell iteration in `CubicalComplex` objects when wrapping a
+ * `LexOrthantIterator`. However, note that the number of cells in a cubical
+ * complex grows quickly in a high-dimensional grid, making individual iteration
+ * over cells inefficient.
+ *
+ * @tparam CCDIM The dimension of the ambient hypercubical grid.
+ * @tparam I The orthant iterator type; must be at least a forward iterator and
+ * return orthants when dereferenced.
+ */
+template <std::size_t CCDIM, std::forward_iterator I>
+requires requires(I it) {
+  { *it } -> std::convertible_to<CubeOrthant<CCDIM>>;
+}
+class BasicCubeIterator {
+private:
+  I orthant_iterator;
+  std::size_t current_extent;
+
+public:
+  /** @brief Difference type between iterators. */
+  using difference_type = std::ptrdiff_t;
+  /** @brief Value type when dereferenced. */
+  using value_type = Cube<CCDIM>;
+  /** @brief Pointer type. */
+  using pointer = value_type*;
+  /** @brief Reference type. */
+  using reference = value_type&;
+  /** @brief Tag for `iterator_traits`. */
+  using iterator_concept = std::forward_iterator_tag;
+
+  /**
+   * @brief Default initialize a new BasicCubeIterator object.
+   *
+   * Unusable in this state but can be assigned to, as normal.
+   */
+  BasicCubeIterator() = default;
+  /**
+   * @brief Construct a new BasicCubeIterator by passing an orthant iterator.
+   *
+   * @param it A forward iterator over the orthants in the hypercubical grid.
+   */
+  explicit BasicCubeIterator(I it) : orthant_iterator(it), current_extent(0) {}
+
+  /**
+   * @brief Dereferencing this iterator yields a cube in the associated
+   * `CubicalComplex`.
+   *
+   * @return Cube<CCDIM>
+   */
+  [[nodiscard]] Cube<CCDIM> operator*() const {
+    return Cube<CCDIM>(*orthant_iterator, current_extent);
+  }
+
+  /**
+   * @brief Equality operates first on the extent in this iterator and secondly
+   * on the wrapped orthant iterator.
+   *
+   * @param rhs
+   * @return true
+   * @return false
+   */
+  [[nodiscard]] bool operator==(const BasicCubeIterator& rhs) const {
+    if (current_extent != rhs.current_extent) {
+      return false;
+    }
+    return orthant_iterator == rhs.orthant_iterator;
+  }
+
+  /**
+   * @brief Preincrememnt increments extent parameter first, then increments
+   * wrapped orthant iterator when extent parameter has reached its max value.
+   *
+   * @return BasicCubeIterator&
+   */
+  BasicCubeIterator& operator++() {
+    ++current_extent;
+    if (current_extent == 1 << CCDIM) {
+      ++orthant_iterator;
+      current_extent = 0;
+    }
+    return *this;
+  }
+  /**
+   * @brief Postincrement operates as normal.
+   */
+  BasicCubeIterator operator++(int) {
+    BasicCubeIterator temp(*this);
+    ++*this;
+    return temp;
+  }
+};
+
+/**
+ * @brief An iterator over the orthants of a hypercubical grid in a
+ * lexicographical order.
+ *
+ * The grid is defined by a minimum orthant and a maximum orthant; starting at
+ * any orthant between these two, the iterator moves along each axis from `0` to
+ * `CCDIM - 1` and increments until it reaches the maximum orthant.
+ *
+ * Used for cell iteration in `CubicalComplex` objects when wrapped with a
+ * `BasicCubeIterator` object.
+ *
+ * @tparam CCDIM The number of dimensions of the hypercubical grid.
+ */
+template <std::size_t CCDIM>
+class LexOrthantIterator {
+private:
+  CubeOrthant<CCDIM> minimum_orthant;
+  CubeOrthant<CCDIM> maximum_orthant;
+  CubeOrthant<CCDIM> current_orthant;
+  bool terminal;
+
+public:
+  /** @brief Difference type between iterators. */
+  using difference_type = std::ptrdiff_t;
+  /** @brief Value type when dereferenced. */
+  using value_type = const CubeOrthant<CCDIM>;
+  /** @brief Pointer type. */
+  using pointer = value_type*;
+  /** @brief Reference type. */
+  using reference = value_type&;
+  /** @brief Tag for `iterator_traits` */
+  using iterator_concept = std::forward_iterator_tag;
+
+  /**
+   * @brief Default initialize a new LexOrthantIterator object.
+   *
+   * Unusable in this state but can be assigned to, as normal.
+   */
+  LexOrthantIterator() = default;
+  /**
+   * @brief Construct a new LexOrthantIterator object by passing minimal and
+   * maximal orthants.
+   *
+   * The terminal flag can be passed as well; a value of `true` notes this as
+   * a past-the-end iterator.
+   *
+   * @param it
+   */
+  explicit LexOrthantIterator(
+      CubeOrthant<CCDIM> minimum_orthant, CubeOrthant<CCDIM> maximum_orthant,
+      CubeOrthant<CCDIM> current_orthant, bool terminal = false
+  ) :
+      minimum_orthant(minimum_orthant), maximum_orthant(maximum_orthant),
+      current_orthant(current_orthant), terminal(terminal) {}
+
+  /**
+   * @brief Dereferencing this iterator yields a constant reference to
+   * the current orthant pointed to.
+   *
+   * @return reference
+   */
+  [[nodiscard]] reference operator*() const {
+    return current_orthant;
+  }
+
+  /**
+   * @brief Equality operates first on the `terminal` flag, then on the current
+   * orhant.
+
+   *
+   * @param rhs
+   * @return true
+   * @return false
+   */
+  [[nodiscard]] bool operator==(const LexOrthantIterator& rhs) const {
+    if (terminal != rhs.terminal) {
+      return false;
+    }
+    if (terminal) {
+      return true;
+    }
+    return current_orthant == rhs.current_orthant;
+  }
+
+  /**
+   * @brief Preincrememnt moves the pointer to the next orthant in a
+   * lexicographical order.
+   *
+   * If it would move past the final orthant, sets the `terminal` flag instead.
+   *
+   * @return LexOrthantIterator&
+   */
+  LexOrthantIterator& operator++() {
+    for (std::size_t axis = 0; axis < CCDIM; ++axis) {
+      if (current_orthant[axis] != maximum_orthant[axis]) {
+        ++current_orthant[axis];
+        return *this;
+      }
+      current_orthant[axis] = minimum_orthant[axis];
+    }
+    terminal = true;
+    return *this;
+  }
+  /**
+   * @brief Postincrement operates as normal.
+   */
+  LexOrthantIterator operator++(int) {
+    LexOrthantIterator temp = *this;
+    ++*this;
+    return temp;
+  }
+};
+
+/**
  * @brief Class implementing a cubical complex embedded in a `CCDIM`-dimensional
  * hypercubical grid.
  *
@@ -214,6 +428,8 @@ public:
   using ChainType = M;
   /** @brief Grading function object type. */
   using GradingType = G;
+  /** @brief Iterator type over cells. */
+  using CellIterType = BasicCubeIterator<CCDIM, LexOrthantIterator<CCDIM>>;
   /** @brief Ambient dimension in which the complex is embedded. */
   static constexpr std::size_t dimension = CCDIM;
 
@@ -305,6 +521,33 @@ public:
    */
   GradingResultType grade(const CellType& cell) {
     return grading_function(cell);
+  }
+
+  /**
+   * @brief Beginning iterator for lexicographical iteration over cells. Allows
+   * use of complex in range-based for loops.
+   *
+   * Due to the very high number of cells in a complex of higher ambient
+   * dimension, it may be inadvisable to iterate over all cells separately using
+   * this method.
+   *
+   * @return CellIterType
+   */
+  [[nodiscard]] CellIterType begin() const noexcept {
+    return CellIterType(
+        LexOrthantIterator(minimum_orthant, maximum_orthant, minimum_orthant)
+    );
+  }
+
+  /**
+   * @brief End sentinel for lexicographical iteration over cells.
+   *
+   * @return CellIterType
+   */
+  [[nodiscard]] CellIterType end() const noexcept {
+    return CellIterType(LexOrthantIterator(
+        minimum_orthant, maximum_orthant, minimum_orthant, true
+    ));
   }
 
   /**
