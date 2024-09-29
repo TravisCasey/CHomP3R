@@ -33,12 +33,12 @@ constexpr std::size_t SIZE_T_BITS = std::numeric_limits<std::size_t>::digits;
 using GradingResultType = std::size_t;
 
 /**
- * @brief Unsigned integer type representing coordinates for expressing the
+ * @brief Integer type representing coordinates for expressing the
  * location of an orthant in the hypercube as an ordered tuple.
  *
  * @sa `CubeOrthant`, `CubicalCell`
  */
-using HypercubeCoordinate = std::uint_fast8_t;
+using HypercubeCoordinate = std::int_fast8_t;
 
 /**
  * @brief Prime value used in custom hash function for `CubicalCell`.
