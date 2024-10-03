@@ -4,7 +4,8 @@ Checks:          'clang-diagnostic-*, clang-analyzer-*, cppcoreguidelines-*, mod
                   -cppcoreguidelines-avoid-magic-numbers, -modernize-use-auto,
                   -cppcoreguidelines-rvalue-reference-param-not-moved, -readability-identifier-length, -llvm-header-guard,
                   -misc-non-private-member-variables-in-classes, -bugprone-easily-swappable-parameters,
-                  -cppcoreguidelines-pro-bounds-constant-array-index, -cppcoreguidelines-pro-type-member-init'
+                  -cppcoreguidelines-pro-bounds-constant-array-index, -cppcoreguidelines-pro-type-member-init,
+                  -cppcoreguidelines-non-private-member-variables-in-classes'
 WarningsAsErrors: true
 FormatStyle:     file
 CheckOptions:
