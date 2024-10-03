@@ -14,10 +14,10 @@
 
 #include <chomp/algebra/algebra.hpp>
 #include <chomp/complexes/complexes.hpp>
-#include <chomp/util/constants.hpp>
 
 #include <compare>
 #include <concepts>
+#include <cstddef>
 #include <list>
 #include <memory>
 #include <tuple>
@@ -100,7 +100,7 @@ private:
   // Unmatched cells, i.e. aces.
   std::vector<CellType> critical_cells;
   // Defines the partial order on kings and queens based on order of matching.
-  MapType<CellType, GradingResultType> priority;
+  MapType<CellType, std::size_t> priority;
   // Collection of pointers to nodes used when constructing the graph.
   MapType<CellType, std::shared_ptr<Node>> node_pointers;
   // Collection of leaves that can be excised and made critical.
@@ -294,7 +294,7 @@ public:
   // priority, and critical cells in a tuple.
   [[nodiscard]] static std::tuple<
       MapType<CellType, std::tuple<CellType, RingType, std::strong_ordering>>,
-      MapType<CellType, GradingResultType>, std::vector<CellType>>
+      MapType<CellType, std::size_t>, std::vector<CellType>>
   compute_matching(std::shared_ptr<CC> complex) {
     HasseCoreduction hasse(complex);
     hasse.match();
@@ -323,8 +323,7 @@ public:
   }
 
   // For simple interfacing prefer using `compute_matching`.
-  [[nodiscard]] MapType<CellType, GradingResultType>
-  get_priority() const noexcept {
+  [[nodiscard]] MapType<CellType, std::size_t> get_priority() const noexcept {
     return priority;
   }
 };
