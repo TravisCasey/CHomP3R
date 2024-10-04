@@ -159,8 +159,8 @@ private:
     if (lower->leaf) {
       leaves.erase(lower->leaves_it);
     }
-    excise_node(upper);
-    excise_node(lower);
+
+    excise_pair(upper, lower);
 
     priority[upper->cell] = priority.size();
     priority[lower->cell] = priority.size();
@@ -179,42 +179,89 @@ private:
     return true;
   }
 
-  // Remove `node` from the graph along with all its connections.
+  // Remove `upper`, `lower` from the graph along with all its connections.
   // Any nodes reduced to 0 boundary by this excision are added to `leaves`
   // Any nodes reduced to 1 boundary by this excision are (attempted) matched
-  void excise_node(std::shared_ptr<Node> node) {
-    std::shared_ptr<Node> node_parent;
-    std::shared_ptr<Node> node_child;
+  void excise_pair(std::shared_ptr<Node> upper, std::shared_ptr<Node> lower) {
+    std::shared_ptr<Node> adjacent;
 
-    // Any subsequent nodes attemtping to refer to this node will know it has
-    // been excised.
+    // Set excised node pointers to null
     if (!node_pointers.empty()) {
-      node_pointers[node->cell] = nullptr;
+      node_pointers[upper->cell] = nullptr;
+      node_pointers[lower->cell] = nullptr;
     }
 
-    // Update child counts; this only affects coboundary so no other actions
-    // are required.
-    for (std::shared_ptr<Edge> boundary_edge : node->boundary) {
-      node_child = boundary_edge->child;
-      node_child->coboundary.erase(boundary_edge->child_it);
+    // Remove edge connecting upper and lower first.
+    lower->coboundary.erase(upper->boundary.front()->child_it);
+    upper->boundary.erase(upper->boundary.front()->parent_it);
+
+    // Remove lower's boundary edges
+    for (std::shared_ptr<Edge> boundary_edge : lower->boundary) {
+      adjacent = boundary_edge->child;
+      adjacent->coboundary.erase(boundary_edge->child_it);
     }
+
+    // Remove lower's coboundary edges; mark newly formed leaves.
+    for (std::shared_ptr<Edge> coboundary_edge : lower->coboundary) {
+      adjacent = coboundary_edge->parent;
+      adjacent->boundary.erase(coboundary_edge->parent_it);
+      if (adjacent->boundary.empty()) {
+        leaves.push_front(adjacent);
+        adjacent->leaf = true;
+        adjacent->leaves_it = leaves.cbegin();
+      }
+    }
+
+    // Remove upper's coboundary edges; mark newly formed leaves.
+    for (std::shared_ptr<Edge> coboundary_edge : upper->coboundary) {
+      adjacent = coboundary_edge->parent;
+      adjacent->boundary.erase(coboundary_edge->parent_it);
+      if (adjacent->boundary.empty()) {
+        leaves.push_front(adjacent);
+        adjacent->leaf = true;
+        adjacent->leaves_it = leaves.cbegin();
+      }
+    }
+
+    // Attempt to match pairs in lower's coboundary.
+    for (std::shared_ptr<Edge> coboundary_edge : lower->coboundary) {
+      adjacent = coboundary_edge->parent;
+      if (adjacent->boundary.size() == 1) {
+        match_pair(adjacent);
+      }
+    }
+
+    // Attempt to match pairs in upper's coboundary.
+    for (std::shared_ptr<Edge> coboundary_edge : upper->coboundary) {
+      adjacent = coboundary_edge->parent;
+      if (adjacent->boundary.size() == 1) {
+        match_pair(adjacent);
+      }
+    }
+  }
+
+  // Remove `leaf` from the graph along with all its connections.
+  // Any nodes reduced to 0 boundary by this excision are added to `leaves`
+  // Any nodes reduced to 1 boundary by this excision are (attempted) matched
+  void excise_leaf(std::shared_ptr<Node> leaf) {
+    std::shared_ptr<Node> adjacent;
 
     // Update parent counts first
-    for (std::shared_ptr<Edge> coboundary_edge : node->coboundary) {
-      node_parent = coboundary_edge->parent;
-      node_parent->boundary.erase(coboundary_edge->parent_it);
-      if (node_parent->boundary.empty()) {
-        leaves.push_front(node_parent);
-        node_parent->leaf = true;
-        node_parent->leaves_it = leaves.cbegin();
+    for (std::shared_ptr<Edge> coboundary_edge : leaf->coboundary) {
+      adjacent = coboundary_edge->parent;
+      adjacent->boundary.erase(coboundary_edge->parent_it);
+      if (adjacent->boundary.empty()) {
+        leaves.push_front(adjacent);
+        adjacent->leaf = true;
+        adjacent->leaves_it = leaves.cbegin();
       }
     }
 
     // Then attempt to make matches
-    for (std::shared_ptr<Edge> coboundary_edge : node->coboundary) {
-      node_parent = coboundary_edge->parent;
-      if (node_parent->boundary.size() == 1) {
-        match_pair(node_parent);
+    for (std::shared_ptr<Edge> coboundary_edge : leaf->coboundary) {
+      adjacent = coboundary_edge->parent;
+      if (adjacent->boundary.size() == 1) {
+        match_pair(adjacent);
       }
     }
   }
@@ -285,7 +332,7 @@ public:
     while (!leaves.empty()) {
       leaf = leaves.front();
       leaves.pop_front();
-      excise_node(leaf);
+      excise_leaf(leaf);
       critical_cells.push_back(std::move(leaf->cell));
     }
   }
