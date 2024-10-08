@@ -70,6 +70,7 @@ private:
     std::list<std::shared_ptr<Edge>> boundary;
     CellType cell;
     bool leaf{false};  // Specifically whether it is already in `leaves`.
+    bool invalidated{false};  // See `connect_node`.
     NodeListIter leaves_it;  // Iterator to leaves, if present.
 
     template <typename TFor>
@@ -188,7 +189,9 @@ private:
     // Set excised node pointers to null
     if (!node_pointers.empty()) {
       node_pointers[upper->cell] = nullptr;
+      upper->invalidated = true;
       node_pointers[lower->cell] = nullptr;
+      lower->invalidated = true;
     }
 
     // Remove edge connecting upper and lower first.
@@ -303,8 +306,12 @@ private:
     }
 
     // Otherwise, connect all newly created child nodes.
+    // New nodes may be excised by other parent nodes before they're connected.
+    // The invalidated flag checks for this behavior.
     for (std::shared_ptr<Node> new_node : additions) {
-      connect_node(new_node);
+      if (!new_node->invalidated) {
+        connect_node(new_node);
+      }
     }
   }
 

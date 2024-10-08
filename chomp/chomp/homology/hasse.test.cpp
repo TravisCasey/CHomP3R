@@ -56,6 +56,9 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
   // Compute matching and check that critical cells have expected dimensions.
   hasse.match();
   REQUIRE(hasse.get_diagram().empty());
+  for (const Cube<2>& critical_cell : hasse.get_critical_cells()) {
+    REQUIRE(!hasse.get_matches().contains(critical_cell));
+  }
   std::vector<int> dimension_counts(3);
   for (const CellType& ace : hasse.get_critical_cells()) {
     ++dimension_counts[ace.dimension()];
