@@ -8,6 +8,7 @@
 #include <chomp/complexes/cubical.hpp>
 #include <chomp/complexes/grading.hpp>
 #include <chomp/homology/hasse.hpp>
+#include <chomp/util/morse.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -56,12 +57,11 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
   // Compute matching and check that critical cells have expected dimensions.
   hasse.match();
   REQUIRE(hasse.get_diagram().empty());
-  for (const Cube<2>& critical_cell : hasse.get_critical_cells()) {
-    REQUIRE(!hasse.get_matches().contains(critical_cell));
-  }
+
   std::vector<int> dimension_counts(3);
-  for (const CellType& ace : hasse.get_critical_cells()) {
-    ++dimension_counts[ace.dimension()];
+  for (const CellType& critical_cell : hasse.get_critical_cells()) {
+    REQUIRE(!hasse.get_matches().contains(critical_cell));
+    ++dimension_counts[critical_cell.dimension()];
   }
   REQUIRE(dimension_counts == std::vector<int>({1, 2, 1}));
 
@@ -73,16 +73,16 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
     // Check that queens satisfy
     // (notation: match(queen_i) = king_i); assume queen_1 != queen_2
     // queen_2 in boundary of king_1 -> priority(queen_2) < priority(queen_1)
-    if (std::get<2>(match_pair.second) == std::strong_ordering::less) {
+    if (match_pair.second.is_queen()) {
       const ChainType neighbors =
-          graded_boundary(*complex, std::get<0>(match_pair.second));
+          graded_boundary(*complex, match_pair.second.cell());
       for (const CellType& cell : neighbors) {
         if (cell == match_pair.first) {
           continue;
         }
         auto match_it = matches.find(cell);
         if (match_it != matches.end()) {
-          if (std::get<2>(match_it->second) == std::strong_ordering::less) {
+          if (match_it->second.is_queen()) {
             REQUIRE(priority[cell] > priority[match_pair.first]);
           }
         }
@@ -92,14 +92,14 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
       // king_2 in coboundary of king_1 -> priority(king_2) > priority(king_1)
     } else {
       const ChainType neighbors =
-          graded_coboundary(*complex, std::get<0>(match_pair.second));
-      for (const auto& cell : neighbors) {
+          graded_coboundary(*complex, match_pair.second.cell());
+      for (const CellType& cell : neighbors) {
         if (cell == match_pair.first) {
           continue;
         }
         auto match_it = matches.find(cell);
         if (match_it != matches.end()) {
-          if (std::get<2>(match_it->second) == std::strong_ordering::greater) {
+          if (match_it->second.is_king()) {
             REQUIRE(priority[cell] < priority[match_pair.first]);
           }
         }

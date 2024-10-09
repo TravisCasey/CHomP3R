@@ -7,7 +7,8 @@ set(TEST_SOURCES
     ${CHOMP_DIR}/chomp/homology/hasse.test.cpp
     ${CHOMP_DIR}/chomp/util/cache.test.cpp
     ${CHOMP_DIR}/chomp/util/concepts.test.cpp
-    ${CHOMP_DIR}/chomp/util/iterators.test.cpp)
+    ${CHOMP_DIR}/chomp/util/iterators.test.cpp
+    ${CHOMP_DIR}/chomp/util/morse.test.cpp)
 
 add_executable(tests ${TEST_SOURCES})
 catch_discover_tests(tests)

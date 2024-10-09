@@ -14,8 +14,8 @@
 
 #include <chomp/algebra/algebra.hpp>
 #include <chomp/complexes/complexes.hpp>
+#include <chomp/util/morse.hpp>
 
-#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <list>
@@ -54,6 +54,7 @@ public:
   using RingType = typename CC::RingType;
   using CellType = typename CC::CellType;
   using ChainType = typename CC::ChainType;
+  using ResultType = MatchResult<CellType, RingType>;
 
 private:
   // Forward declarations as these classes refer to each other.
@@ -96,8 +97,7 @@ private:
   std::shared_ptr<CC> upper_complex_ptr;
   // The result of matching; Cell matched to a cell, with a coefficient, and an
   // indicator of whether it matches up or down (in cell dimension).
-  MapType<CellType, std::tuple<CellType, RingType, std::strong_ordering>>
-      matches;
+  MapType<CellType, ResultType> matches;
   // Unmatched cells, i.e. aces.
   std::vector<CellType> critical_cells;
   // Defines the partial order on kings and queens based on order of matching.
@@ -169,12 +169,11 @@ private:
     CellType upper_cell(std::move(upper->cell));
     CellType lower_cell(std::move(lower->cell));
     matches.insert(std::make_pair(
-        upper_cell,
-        std::make_tuple(lower_cell, coef, std::strong_ordering::greater)
+        upper_cell, ResultType(lower_cell, coef, Trichotomy::king)
     ));
     matches.insert(std::make_pair(
         std::move(lower_cell),
-        std::make_tuple(std::move(upper_cell), coef, std::strong_ordering::less)
+        ResultType(std::move(upper_cell), coef, Trichotomy::queen)
     ));
 
     return true;
@@ -347,8 +346,8 @@ public:
   // Simple exterior interface to get the matching. Returns the matches,
   // priority, and critical cells in a tuple.
   [[nodiscard]] static std::tuple<
-      MapType<CellType, std::tuple<CellType, RingType, std::strong_ordering>>,
-      MapType<CellType, std::size_t>, std::vector<CellType>>
+      MapType<CellType, ResultType>, MapType<CellType, std::size_t>,
+      std::vector<CellType>>
   compute_matching(std::shared_ptr<CC> complex) {
     HasseCoreduction hasse(complex);
     hasse.match();
@@ -370,9 +369,7 @@ public:
   }
 
   // For simple interfacing prefer using `compute_matching`.
-  [[nodiscard]] MapType<
-      CellType, std::tuple<CellType, RingType, std::strong_ordering>>
-  get_matches() const noexcept {
+  [[nodiscard]] MapType<CellType, ResultType> get_matches() const noexcept {
     return matches;
   }
 
