@@ -119,6 +119,8 @@ private:
 public:
   /** @brief The type expected as input to the call operator. */
   using InputType = T;
+  /** @brief The value type of the underlying map. */
+  using ValueType = typename MapType<T, GradingResultType>::value_type;
   /** @brief The minimal output value in the map. */
   using Minimum = std::integral_constant<GradingResultType, MIN>;
   /** @brief The maximal output value in the map. */
@@ -128,7 +130,7 @@ public:
   MapGrading(MapType<T, GradingResultType> grading_map) :
       grading_map(grading_map) {}
   /** @brief Initialize the grading by providing an initializer list. */
-  MapGrading(std::initializer_list<std::pair<T, GradingResultType>> grading_list
+  MapGrading(std::initializer_list<ValueType> grading_list
   ) : grading_map(grading_list) {}
 
   /**
@@ -173,6 +175,8 @@ private:
 public:
   /** @brief The type expected as input to the call operator. */
   using InputType = T;
+  /** @brief The value type of the underlying set. */
+  using ValueType = typename SetType<T>::value_type;
   /** @brief The output value if the input object is in the set. */
   using Minimum = std::integral_constant<GradingResultType, MIN>;
   /** @brief The output value if the input object is not in the set. */
@@ -181,7 +185,7 @@ public:
   /** @brief Initialize the grading by explicitly providing the set. */
   SetGrading(SetType<T> grading_set) : grading_set(grading_set) {}
   /** @brief Initialize the grading by providing an initializer list. */
-  SetGrading(std::initializer_list<T> grading_list) :
+  SetGrading(std::initializer_list<ValueType> grading_list) :
       grading_set(grading_list) {}
 
   /**

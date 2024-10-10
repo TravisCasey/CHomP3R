@@ -146,8 +146,10 @@ TEST_CASE("SetGrading functions correctly", "[complexes]") {
 
 TEST_CASE("MapGrading functions correctly", "[complexes]") {
   const std::initializer_list<std::pair<const int, GradingResultType>> ilist = {
-      std::make_pair(0, 4), std::make_pair(1, 5), std::make_pair(2, 7),
-      std::make_pair(20, 10)
+      { 0,  4},
+      { 1,  5},
+      { 2,  7},
+      {20, 10}
   };
   constexpr std::size_t MIN = 4;
   constexpr std::size_t MAX = 10;
