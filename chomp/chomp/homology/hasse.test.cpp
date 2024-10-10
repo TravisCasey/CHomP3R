@@ -42,7 +42,8 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
       CubicalComplex<2, decltype(grading_func), int>, std::unordered_map>
       hasse(complex);
 
-  // Check the leaves after construction are correct.
+  // Check the leaves after construction are correct. In other words, these are
+  // all cells with 0 boundary cells after all coreductions are removed.
   std::set<CellType> leaf_cells;
   std::set<CellType> correct(
       {Cube<2>({0, 0}, 0), Cube<2>({1, 0}, 0), Cube<2>({0, 1}, 0),
@@ -54,20 +55,63 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
   }
   REQUIRE(leaf_cells == correct);
 
-  // Compute matching and check that critical cells have expected dimensions.
+  // Compute matching and confirm hasse diagram is empty.
   hasse.match();
   REQUIRE(hasse.get_diagram().empty());
-
-  std::vector<int> dimension_counts(3);
-  for (const CellType& critical_cell : hasse.get_critical_cells()) {
-    REQUIRE(!hasse.get_matches().contains(critical_cell));
-    ++dimension_counts[critical_cell.dimension()];
-  }
-  REQUIRE(dimension_counts == std::vector<int>({1, 2, 1}));
-
+  auto critical_cells = hasse.get_critical_cells();
   auto matches = hasse.get_matches();
   auto priority = hasse.get_priority();
 
+  // Check the trichotomy
+  for (const CellType& cell : *complex) {
+    auto it = matches.find(cell);
+
+    // king or queen
+    if (it != matches.end()) {
+      // Ensure match agrees
+      auto match_it = matches.find(it->second.cell());
+      CHECK(match_it != matches.end());
+      CHECK(match_it->second.cell() == cell);
+      CHECK_FALSE(it->second.is_ace());
+      CHECK_FALSE(match_it->second.is_ace());
+
+      // Check dimensionality
+      if (it->second.is_queen()) {
+        CHECK(cell.dimension() + 1 == match_it->first.dimension());
+        CHECK(match_it->second.is_king());
+      } else {
+        CHECK(it->second.is_king());
+        CHECK(cell.dimension() - 1 == match_it->first.dimension());
+        CHECK(match_it->second.is_queen());
+      }
+
+      // check that this king/queen did not end up in critical cells
+      int occurences = 0;
+      for (const CellType& ace : critical_cells) {
+        if (ace == cell) {
+          occurences += 1;
+        }
+      }
+      CHECK(occurences == 0);
+
+    } else {
+      // if not king or queen, must be critical (ace)
+      int occurences = 0;
+      for (const CellType& ace : critical_cells) {
+        if (ace == cell) {
+          occurences += 1;
+        }
+      }
+      CHECK(occurences == 1);
+    }
+  }
+
+  // Confirm dimension counts of critical cells.
+  std::vector<int> dimension_counts(3);
+  for (const CellType& critical_cell : hasse.get_critical_cells()) {
+    ++dimension_counts[critical_cell.dimension()];
+  }
+  REQUIRE(dimension_counts == std::vector<int>({1, 2, 1}));
 
   for (const auto& match_pair : matches) {
     // Check that queens satisfy
