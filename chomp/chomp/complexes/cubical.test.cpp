@@ -15,6 +15,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <concepts>
+#include <cstddef>
 #include <initializer_list>
 #include <set>
 #include <utility>
@@ -228,6 +229,32 @@ TEST_CASE("Cubical complex cell iteration", "[complexes]") {
   }
   CHECK(cube_set.size() == 24);
   CHECK(cube_set == result_set);
+}
+
+TEST_CASE("TopCubeSetGrading works correctly.", "[complexes]") {
+  const std::initializer_list<CubeOrthant<4>> grading_ilist = {
+      {1, 1, 1, 1},
+      {1, 1, 1, 0},
+      {0, 0, 0, 0}
+  };
+  const TopCubeSetGrading<4> grading_func(grading_ilist);
+
+  for (std::size_t extent = 0; extent < (1 << 4); ++extent) {
+    CHECK(grading_func(Cube<4>({1, 1, 1, 1}, extent)) == 0);
+  }
+
+  CHECK(grading_func(Cube<4>({2, 2, 2, 2}, 0)) == 0);
+  for (std::size_t extent = 1; extent < (1 << 4); ++extent) {
+    CHECK(grading_func(Cube<4>({2, 2, 2, 2}, extent)) == 1);
+  }
+
+  CHECK(grading_func(Cube<4>({1, 0, 0, 0}, 14)) == 0);
+  CHECK(grading_func(Cube<4>({1, 0, 0, 0}, 1)) == 1);
+
+  for (const CubeOrthant<4>& orthant : grading_ilist) {
+    CHECK(grading_func(orthant) == 0);
+  }
+  CHECK(grading_func({1, 0, 0, 0}) == 1);
 }
 
 

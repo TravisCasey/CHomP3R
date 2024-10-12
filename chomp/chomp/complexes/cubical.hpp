@@ -17,6 +17,7 @@
 #include <chomp/algebra/modules.hpp>
 #include <chomp/complexes/complexes.hpp>
 #include <chomp/complexes/grading.hpp>
+#include <chomp/util/concepts.hpp>
 #include <chomp/util/constants.hpp>
 
 #include <algorithm>
@@ -26,7 +27,9 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
+#include <type_traits>
 
 namespace chomp::core {
 
@@ -149,23 +152,27 @@ public:
 
 namespace std {
 
-/**
- * @brief Hash specialization for `Cube` class.
- *
- * @tparam CCDIM
- */
+/** @brief Hash specialization for `CubeOrthant` class template. */
+template <size_t CCDIM>
+struct hash<chomp::core::CubeOrthant<CCDIM>> {
+  /** @brief Hash the orthant by prime combinations of its axis values. */
+  size_t operator()(const chomp::core::CubeOrthant<CCDIM>& orthant) const {
+    constexpr size_t PRIME = chomp::core::CUBE_HASH_PRIME;
+    size_t hash_result = 0;
+    for (size_t axis = 0; axis < CCDIM; ++axis) {
+      hash_result = PRIME * hash_result + orthant[axis];
+    }
+    return hash_result;
+  }
+};
+
+/** @brief Hash specialization for `Cube` class template. */
 template <size_t CCDIM>
 struct hash<chomp::core::Cube<CCDIM>> {
   /** @brief Hash the `Cube` by its orthant and its extent/shape parameter. */
   size_t operator()(const chomp::core::Cube<CCDIM>& cube) const {
-    constexpr size_t PRIME = chomp::core::CUBE_HASH_PRIME;
-    constexpr size_t BIT_DIFFERENCE = chomp::core::SIZE_T_BITS - CCDIM;
-    size_t hash_result = 0;
-    const chomp::core::CubeOrthant<CCDIM>& cube_orthant = cube.orthant();
-    for (size_t idx = 0; idx < CCDIM; ++idx) {
-      hash_result = PRIME * hash_result + cube_orthant[idx];
-    }
-    return hash_result ^ (cube.extent() << BIT_DIFFERENCE);
+    return hash<chomp::core::CubeOrthant<CCDIM>>{}(cube.orthant()) ^
+           (cube.extent() << (chomp::core::SIZE_T_BITS - CCDIM));
   }
 };
 
@@ -652,6 +659,112 @@ public:
       }
     }
     return result;
+  }
+};
+
+/**
+ * @brief A function object modeling `BoundedGrading` based on the cell being in
+ * the closure of top dimensional (i.e. dimesnion `CCDIM`) cubes.
+ *
+ * @tparam CCDIM Dimension of the ambient hypercubical complex.
+ * @tparam MIN Minimal value, i.e. the value returned if the queried cell is in
+ * the closure of an included top-dimensional cell.
+ * @tparam MAX Maximal value, i.e. the value returned if the queried cell is NOT
+ * in the closure of an included top-dimensional cell.
+ * @tparam SetType The underlying set data structure. Expected to be either
+ * `std::set` or `std::unordered_set` but any set-like container with
+ * sufficiently similar interface can work. The default type is
+ * `std::unordered_set` as the stored `CubeOrthant<CCDIM>` type is hashable.
+ */
+template <
+    std::size_t CCDIM, GradingResultType MIN = 0, GradingResultType MAX = 1,
+    template <typename...> typename SetType = DefaultSet>
+class TopCubeSetGrading {
+public:
+  /** @brief Input cell type to the grading function. */
+  using InputType = Cube<CCDIM>;
+  /** @brief Orthant type. */
+  using OrthantType = CubeOrthant<CCDIM>;
+  /** @brief Value type of the underlying orthant set. */
+  using ValueType = typename SetType<OrthantType>::value_type;
+  /** @brief Minimal grading value. */
+  using Minimum = std::integral_constant<GradingResultType, MIN>;
+  /** @brief Maximal grading value. */
+  using Maximum = std::integral_constant<GradingResultType, MAX>;
+
+private:
+  SetType<OrthantType> top_cube_set;
+
+public:
+  /**
+   * @brief Initialize a TopCubeSetGrading function object by supplying a set of
+   * the (orthants of) top-dimensional cubes with minimal grade.
+   *
+   * @param top_cubes
+   */
+  TopCubeSetGrading(const SetType<OrthantType>& top_cubes) :
+      top_cube_set(top_cubes) {}
+  /** @overload */
+  TopCubeSetGrading(SetType<OrthantType>&& top_cubes) :
+      top_cube_set(top_cubes) {}
+  /** @overload */
+  TopCubeSetGrading(const std::initializer_list<ValueType>& top_cubes) :
+      top_cube_set(top_cubes) {}
+  /** @overload */
+  TopCubeSetGrading(std::initializer_list<ValueType>&& top_cubes) :
+      top_cube_set(top_cubes) {}
+
+  /**
+   * @brief Query the grade of `orthant`, i.e. the minimal value (`MIN`) if
+   * `orthant` corresponds to a stored top-dimensional cube or the maximal value
+   * (`MAX`) otherwise.
+   *
+   * @param orthant
+   * @return GradingResultType
+   */
+  GradingResultType operator()(const OrthantType& orthant) const noexcept {
+    return top_cube_set.contains(orthant) ? MIN : MAX;
+  }
+
+  /**
+   * @brief Query the grade of a cell (cube) by determining if it is in the
+   * closure of a top-dimensional cell of minimal grade.
+   *
+   * @param cube
+   * @return GradingResultType
+   */
+  GradingResultType operator()(const InputType& cube) const noexcept {
+    // Used for iterating in surrounding orthants.
+    std::array<bool, CCDIM> minimal{};
+
+    CubeOrthant<CCDIM> current_orthant = cube.orthant();
+    while (true) {
+      if (top_cube_set.contains(current_orthant)) {
+        return MIN;
+      }
+
+      // Iterate to next orthant.
+      bool broken = false;
+      std::size_t axis = 0;
+      std::size_t axis_flag = 1;
+      for (; axis < CCDIM; ++axis, axis_flag <<= 1) {
+        if (cube.extent() & axis_flag) {
+          continue;
+        }
+        if (!minimal[axis]) {
+          minimal[axis] = true;
+          --(current_orthant[axis]);
+          broken = true;
+          break;
+        }
+        minimal[axis] = false;
+        ++(current_orthant[axis]);
+      }
+
+      if (!broken) {
+        return MAX;
+      }
+    }
   }
 };
 
