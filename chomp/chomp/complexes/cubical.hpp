@@ -521,13 +521,19 @@ public:
   }
 
   /**
-   * @brief Grade a given cell according to the complex's grading function.
+   * @brief Grade `input` according to the complex's grading function.
    *
-   * @param cell
+   * @tparam T The type of the input. At minimum, this includes the complex's
+   * cell type.
+   * @param input
    * @return GradingResultType
    */
-  GradingResultType grade(const CellType& cell) {
-    return grading_function(cell);
+  template <typename T>
+  requires requires(T t) {
+    { grading_function(t) } -> std::convertible_to<GradingResultType>;
+  }
+  GradingResultType grade(const T& input) {
+    return grading_function(input);
   }
 
   /**
