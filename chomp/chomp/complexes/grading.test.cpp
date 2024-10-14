@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <initializer_list>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -166,6 +167,32 @@ TEST_CASE("MapGrading functions correctly", "[complexes]") {
 
   CHECK(grade_func(-1) == MAX);
   CHECK(grade_func(-3) == MAX);
+}
+
+TEST_CASE("BoundAccess deduces and specializes correctly.", "[complexes]") {
+  CHECK(
+      BoundAccess<GradingTest>::Minimum ==
+      std::numeric_limits<GradingResultType>::min()
+  );
+  CHECK(
+      BoundAccess<GradingTest>::Maximum ==
+      std::numeric_limits<GradingResultType>::max()
+  );
+
+  CHECK(BoundAccess<LBGradingTest>::Minimum == 2);
+  CHECK(
+      BoundAccess<LBGradingTest>::Maximum ==
+      std::numeric_limits<GradingResultType>::max()
+  );
+
+  CHECK(
+      BoundAccess<UBGradingTest>::Minimum ==
+      std::numeric_limits<GradingResultType>::min()
+  );
+  CHECK(BoundAccess<UBGradingTest>::Maximum == 12);
+
+  CHECK(BoundAccess<BGradingTest>::Minimum == 2);
+  CHECK(BoundAccess<BGradingTest>::Maximum == 12);
 }
 
 }  // namespace chomp::core

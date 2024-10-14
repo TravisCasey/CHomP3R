@@ -19,6 +19,7 @@
 #include <concepts>
 #include <cstddef>
 #include <initializer_list>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -130,8 +131,8 @@ public:
   MapGrading(MapType<T, GradingResultType> grading_map) :
       grading_map(grading_map) {}
   /** @brief Initialize the grading by providing an initializer list. */
-  MapGrading(std::initializer_list<ValueType> grading_list
-  ) : grading_map(grading_list) {}
+  MapGrading(std::initializer_list<ValueType> grading_list) :
+      grading_map(grading_list) {}
 
   /**
    * @brief Call the function object with `input` and return the grade.
@@ -372,6 +373,67 @@ public:
   GradingResultType operator()(InFor&& input) {
     return cache[std::forward<InFor>(input)];
   }
+};
+
+}  // namespace chomp::core
+
+#ifndef CHOMP_DOXYGEN
+
+namespace chomp::core::detail {
+
+template <bool L, bool U, typename G>
+struct BoundAccessHelper {
+  static constexpr GradingResultType Minimum =
+      std::numeric_limits<GradingResultType>::min();
+  static constexpr GradingResultType Maximum =
+      std::numeric_limits<GradingResultType>::max();
+};
+
+template <typename G>
+struct BoundAccessHelper<true, false, G> {
+  static constexpr GradingResultType Minimum = G::Minimum::value;
+  static constexpr GradingResultType Maximum =
+      std::numeric_limits<GradingResultType>::max();
+};
+
+template <typename G>
+struct BoundAccessHelper<false, true, G> {
+  static constexpr GradingResultType Minimum =
+      std::numeric_limits<GradingResultType>::min();
+  static constexpr GradingResultType Maximum = G::Maximum::value;
+};
+
+template <typename G>
+struct BoundAccessHelper<true, true, G> {
+  static constexpr GradingResultType Minimum = G::Minimum::value;
+  static constexpr GradingResultType Maximum = G::Maximum::value;
+};
+
+}  // namespace chomp::core::detail
+
+#endif  // CHOMP_DOXYGEN
+
+namespace chomp::core {
+
+/**
+ * @brief Access the upper and lower bounds of a function object type modeling
+ * `Grading` with a unified interface.
+ *
+ * If the type exposes an integral constant `Minimum` (resp. `Maximum`), this
+ * type exposes a static constexpr `Minimum` (resp. `Maximum`) with the same
+ * value. Otherwise, its value is the minimum (resp. maximum) value expressable
+ * by `GradingResultType`.
+ *
+ * @tparam G Function object type modeling `Grading`.
+ */
+template <Grading G>
+struct BoundAccess {
+  /** @brief A value no greater than any returned value from `G` objects. */
+  static constexpr GradingResultType Minimum = detail::BoundAccessHelper<
+      LowerBoundedGrading<G>, UpperBoundedGrading<G>, G>::Minimum;
+  /** @brief A value no less than any returned value from `G` objects. */
+  static constexpr GradingResultType Maximum = detail::BoundAccessHelper<
+      LowerBoundedGrading<G>, UpperBoundedGrading<G>, G>::Maximum;
 };
 
 
