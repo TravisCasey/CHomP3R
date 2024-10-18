@@ -9,6 +9,9 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
+#include <concepts>
+#include <cstddef>
 #include <iterator>
 #include <map>
 #include <tuple>
@@ -69,6 +72,79 @@ TEMPLATE_LIST_TEST_CASE(
   CHECK(temp == KeyIterator(m.cbegin()));
   CHECK(m.count(*it) == 1);
   CHECK(++it == KeyIterator(m.cend()));
+}
+
+TEST_CASE("Test BFS metaprogramming routine.", "[util]") {
+  SECTION("TupleConcat struct.") {
+    using Tuple_1 = std::tuple<
+        std::integral_constant<std::size_t, 3>,
+        std::integral_constant<std::size_t, 0>>;
+    using Tuple_2 = std::tuple<>;
+    using Tuple_3 = std::tuple<std::integral_constant<std::size_t, 11>>;
+    using ResultTuple = std::tuple<
+        std::integral_constant<std::size_t, 3>,
+        std::integral_constant<std::size_t, 0>,
+        std::integral_constant<std::size_t, 11>>;
+
+    CHECK(std::same_as<
+          detail::TupleConcat<Tuple_1, Tuple_2, Tuple_3>, ResultTuple>);
+  }
+
+  SECTION("BitIf struct.") {
+    using original = std::integral_constant<std::size_t, 0b1001>;
+    const std::size_t set_bit_flag = 0b0001;
+    using set_generated =
+        std::tuple<std::integral_constant<std::size_t, 0b1000>>;
+    using set_continued = std::tuple<original>;
+    const std::size_t unset_bit_flag = 0b0100;
+    using unset_generated = std::tuple<>;
+    using unset_continued = std::tuple<>;
+
+    CHECK(std::same_as<
+          typename detail::BitIf<
+              original, original() ^ set_bit_flag,
+              bool(original() & set_bit_flag)>::generated,
+          set_generated>);
+    CHECK(std::same_as<
+          typename detail::BitIf<
+              original, original() ^ set_bit_flag,
+              bool(original() & set_bit_flag)>::continued,
+          set_continued>);
+
+    CHECK(std::same_as<
+          typename detail::BitIf<
+              original, original() ^ unset_bit_flag,
+              bool(original() & unset_bit_flag)>::generated,
+          unset_generated>);
+    CHECK(std::same_as<
+          typename detail::BitIf<
+              original, original() ^ unset_bit_flag,
+              bool(original() & unset_bit_flag)>::continued,
+          unset_continued>);
+  }
+
+  SECTION("BFSLoop struct.") {
+    using InputTuple = std::tuple<
+        std::integral_constant<std::size_t, 0b110>,
+        std::integral_constant<std::size_t, 0b101>,
+        std::integral_constant<std::size_t, 0b011>>;
+    using ResultTuple = std::tuple<
+        std::integral_constant<std::size_t, 0b100>,
+        std::integral_constant<std::size_t, 0b010>,
+        std::integral_constant<std::size_t, 0b001>>;
+
+    CHECK(std::same_as<
+          typename detail::BFSLoop<3, 0, InputTuple>::type, ResultTuple>);
+  }
+
+  SECTION("BFS_CUBE_ARRAY generates correctly.", "[util]") {
+    std::array<std::size_t, 16> correct = {0b1111, 0b1110, 0b1101, 0b1011,
+                                           0b0111, 0b1100, 0b1010, 0b0110,
+                                           0b1001, 0b0101, 0b0011, 0b1000,
+                                           0b0100, 0b0010, 0b0001, 0b0000};
+
+    CHECK(BFS_CUBE_ARRAY<4> == correct);
+  }
 }
 
 }  // namespace chomp::core
