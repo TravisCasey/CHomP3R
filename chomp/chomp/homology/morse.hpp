@@ -146,7 +146,7 @@ public:
    * `cell` is matched to, their incidence on each other, and whether `cell` is
    * a queen, ace, or king.
    */
-  [[nodiscard]] virtual ResultType match(const CellType& cell) const = 0;
+  [[nodiscard]] virtual ResultType match(const CellType& cell) = 0;
 
   /**
    * @brief Constant iterator to the beginning of the critical cells (aces).
@@ -184,7 +184,7 @@ public:
    */
   [[nodiscard]] virtual std::pair<
       MapType<CellType, ChainType>, MapType<CellType, ChainType>>
-  compute_operators() const {
+  compute_operators() {
     MapType<CellType, ChainType> boundaries;
     MapType<CellType, ChainType> coboundaries;
 
@@ -214,7 +214,7 @@ public:
    * @param chain Chain in the upper complex.
    * @return ChainType Representative lowered chain in the Morse complex.
    */
-  [[nodiscard]] ChainType lower(const ChainType& chain) const {
+  [[nodiscard]] ChainType lower(const ChainType& chain) {
     // Remaining queens and their coefficients to be eliminated.
     ChainType queen_chain;
     // Aces in this chain are the resulting lowered chain.
@@ -253,10 +253,10 @@ public:
       // Get the first (in ordering on queens) with nonzero coefficient.
       incidence = queen_chain[queen_queue.top().first];
       while (incidence == zero<RingType>()) {
+        queen_queue.pop();
         if (queen_queue.empty()) {
           return ace_chain;
         }
-        queen_queue.pop();
         incidence = queen_chain[queen_queue.top().first];
       }
 
@@ -282,7 +282,7 @@ public:
     return ace_chain;
   }
   /** @overload */
-  [[nodiscard]] ChainType lower(const CellType& cell) const {
+  [[nodiscard]] ChainType lower(const CellType& cell) {
     ChainType cell_chain;
     cell_chain.insert(cell, one<RingType>());
     return lower(cell_chain);
@@ -295,7 +295,7 @@ public:
    * @param chain Chain in the Morse complex.
    * @return ChainType Representative lifted chain in the upper complex.
    */
-  [[nodiscard]] ChainType lift(const ChainType& chain) const {
+  [[nodiscard]] ChainType lift(const ChainType& chain) {
     // Remaining queens and their coefficients to be eliminated.
     ChainType queen_chain;
     // Kings in this chain plus `chain` itself is the resuling lifted chain.
@@ -332,10 +332,10 @@ public:
       // Get the first (in ordering on queens) with nonzero coefficient.
       incidence = queen_chain[queen_queue.top().first];
       while (incidence == zero<RingType>()) {
+        queen_queue.pop();
         if (queen_queue.empty()) {
           return chain + king_chain;
         }
-        queen_queue.pop();
         incidence = queen_chain[queen_queue.top().first];
       }
 
@@ -361,7 +361,7 @@ public:
     return chain + king_chain;
   }
   /** @overload */
-  [[nodiscard]] ChainType lift(const CellType& cell) const {
+  [[nodiscard]] ChainType lift(const CellType& cell) {
     ChainType cell_chain;
     cell_chain.insert(cell, one<RingType>());
     return lift(cell_chain);
@@ -374,7 +374,7 @@ public:
    * @param chain Cochain in the upper complex.
    * @return ChainType Representative lowered cochain in the Morse complex.
    */
-  [[nodiscard]] ChainType colower(const ChainType& chain) const {
+  [[nodiscard]] ChainType colower(const ChainType& chain) {
     // Remaining kings and their coefficients to be eliminated.
     ChainType king_chain;
     // Aces in this chain are the resulting (co)lowered chain.
@@ -413,10 +413,10 @@ public:
       // Get the first (in ordering on kings) with nonzero coefficient.
       incidence = king_chain[king_queue.top().first];
       while (incidence == zero<RingType>()) {
+        king_queue.pop();
         if (king_queue.empty()) {
           return ace_chain;
         }
-        king_queue.pop();
         incidence = king_chain[king_queue.top().first];
       }
 
@@ -442,7 +442,7 @@ public:
     return ace_chain;
   }
   /** @overload */
-  [[nodiscard]] ChainType colower(const CellType& cell) const {
+  [[nodiscard]] ChainType colower(const CellType& cell) {
     ChainType cell_chain;
     cell_chain.insert(cell, one<RingType>());
     return colower(cell_chain);
@@ -455,7 +455,7 @@ public:
    * @param chain Cochain in the Morse complex.
    * @return ChainType Representative lifted cochain in the upper complex.
    */
-  [[nodiscard]] ChainType colift(const ChainType& chain) const {
+  [[nodiscard]] ChainType colift(const ChainType& chain) {
     // Remaining kings and their coefficients to be eliminated.
     ChainType king_chain;
     // Queens in this chain plus `chain` itself is the resuling lifted chain.
@@ -492,10 +492,10 @@ public:
       // Get the first (in ordering on kings) with nonzero coefficient.
       incidence = king_chain[king_queue.top().first];
       while (incidence == zero<RingType>()) {
+        king_queue.pop();
         if (king_queue.empty()) {
           return chain + queen_chain;
         }
-        king_queue.pop();
         incidence = king_chain[king_queue.top().first];
       }
 
@@ -521,7 +521,7 @@ public:
     return chain + queen_chain;
   }
   /** @overload */
-  [[nodiscard]] ChainType colift(const CellType& cell) const {
+  [[nodiscard]] ChainType colift(const CellType& cell) {
     ChainType cell_chain;
     cell_chain.insert(cell, one<RingType>());
     return colift(cell_chain);
@@ -634,7 +634,7 @@ public:
    * `cell` is matched to, their incidence on each other, and whether `cell` is
    * a queen, ace, or king.
    */
-  [[nodiscard]] ResultType match(const CellType& cell) const override {
+  [[nodiscard]] ResultType match(const CellType& cell) override {
     MatchIterType match_it = matches.find(cell);
     if (match_it != matches.cend()) {
       return match_it->second;
