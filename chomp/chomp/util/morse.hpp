@@ -139,6 +139,8 @@ public:
   [[nodiscard]] bool is_king() const noexcept {
     return match_tri == Trichotomy::king;
   }
+
+  [[nodiscard]] bool operator==(const MatchResult&) const noexcept = default;
 };
 
 }  // namespace chomp::core
