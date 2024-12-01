@@ -300,7 +300,7 @@ concept ModulePrecursor = requires(M mod) {
  */
 template <ModulePrecursor M>
 M& operator+=(M& lhs, const M& rhs) {
-  for (const typename M::BasisType cell : rhs) {
+  for (const typename M::BasisType& cell : rhs) {
     lhs.insert(cell, rhs[cell]);
   }
   return lhs;
@@ -320,7 +320,7 @@ M& operator+=(M& lhs, const M& rhs) {
  */
 template <ModulePrecursor M>
 M& operator-=(M& lhs, const M& rhs) {
-  for (const typename M::BasisType cell : rhs) {
+  for (const typename M::BasisType& cell : rhs) {
     lhs.insert(cell, -rhs[cell]);
   }
   return lhs;
