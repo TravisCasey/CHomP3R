@@ -55,11 +55,10 @@ concept Grading = requires(G g, const typename G::InputType a) {
  * @tparam G Grading function object.
  */
 template <typename G>
-concept LowerBoundedGrading =
-    Grading<G> &&
-    std::same_as<
-        typename G::Minimum,
-        std::integral_constant<GradingResultType, G::Minimum::value>>;
+concept LowerBoundedGrading
+    = Grading<G>
+      && std::same_as<typename G::Minimum,
+          std::integral_constant<GradingResultType, G::Minimum::value>>;
 /**
  * @brief A grading function object that has an upper bound on its output
  * values.
@@ -73,11 +72,10 @@ concept LowerBoundedGrading =
  * @tparam G Grading function object.
  */
 template <typename G>
-concept UpperBoundedGrading =
-    Grading<G> &&
-    std::same_as<
-        typename G::Maximum,
-        std::integral_constant<GradingResultType, G::Maximum::value>>;
+concept UpperBoundedGrading
+    = Grading<G>
+      && std::same_as<typename G::Maximum,
+          std::integral_constant<GradingResultType, G::Maximum::value>>;
 /**
  * @brief A grading function object that has both a lower and an upper bound on
  * its output values.
@@ -92,8 +90,31 @@ concept UpperBoundedGrading =
  * @tparam G Grading function object.
  */
 template <typename G>
-concept BoundedGrading =
-    Grading<G> && LowerBoundedGrading<G> && UpperBoundedGrading<G>;
+concept BoundedGrading
+    = Grading<G> && LowerBoundedGrading<G> && UpperBoundedGrading<G>;
+
+/**
+ * @brief A function object modeling `BoundedGrading` which grades all inputs
+ * of type `T` as `Val`.
+ */
+template <typename T, GradingResultType Val>
+class TrivialGrading {
+public:
+  /** @brief The type expected as input to the call operator. */
+  using InputType = T;
+  /** @brief Identical to the template parameter `Val`. */
+  using Minimum = std::integral_constant<GradingResultType, Val>;
+  /** @brief Identical to the template parameter `Val`. */
+  using Maximum = std::integral_constant<GradingResultType, Val>;
+
+  /** @brief Default initialization only as the this class has no state. */
+  TrivialGrading() = default;
+
+  /** @brief Returns the template parameter `Val` for any input. */
+  [[nodiscard]] GradingResultType operator()(const InputType&) const noexcept {
+    return Val;
+  }
+};
 
 /**
  * @brief A function object modeling `BoundedGrading` based on a map from the
@@ -110,8 +131,7 @@ concept BoundedGrading =
  * sufficiently similar interface can work. The default type is
  * `std::unordered_map` if `T` is hashable and `std::map` otherwise.
  */
-template <
-    AssociativeKey T, GradingResultType MIN, GradingResultType MAX,
+template <AssociativeKey T, GradingResultType MIN, GradingResultType MAX,
     template <typename...> typename MapType = DefaultMap>
 class MapGrading {
 private:
@@ -144,8 +164,8 @@ public:
    * @return GradingResultType
    */
   GradingResultType operator()(const InputType& input) const {
-    typename MapType<T, GradingResultType>::const_iterator it =
-        grading_map.find(input);
+    typename MapType<T, GradingResultType>::const_iterator it
+        = grading_map.find(input);
     return it != grading_map.cend() ? it->second : MAX;
   }
 };
@@ -166,8 +186,7 @@ public:
  * sufficiently similar interface can work. The default type is
  * `std::unordered_set` if `T` is hashable and `std::set` otherwise.
  */
-template <
-    AssociativeKey T, GradingResultType MIN, GradingResultType MAX,
+template <AssociativeKey T, GradingResultType MIN, GradingResultType MAX,
     template <typename...> typename SetType = DefaultSet>
 class SetGrading {
 private:
@@ -184,7 +203,8 @@ public:
   using Maximum = std::integral_constant<GradingResultType, MAX>;
 
   /** @brief Initialize the grading by explicitly providing the set. */
-  SetGrading(SetType<T> grading_set) : grading_set(grading_set) {}
+  SetGrading(SetType<T> grading_set) :
+      grading_set(grading_set) {}
   /** @brief Initialize the grading by providing an initializer list. */
   SetGrading(std::initializer_list<ValueType> grading_list) :
       grading_set(grading_list) {}
@@ -383,23 +403,23 @@ namespace chomp::core::detail {
 
 template <bool L, bool U, typename G>
 struct BoundAccessHelper {
-  static constexpr GradingResultType Minimum =
-      std::numeric_limits<GradingResultType>::min();
-  static constexpr GradingResultType Maximum =
-      std::numeric_limits<GradingResultType>::max();
+  static constexpr GradingResultType Minimum
+      = std::numeric_limits<GradingResultType>::min();
+  static constexpr GradingResultType Maximum
+      = std::numeric_limits<GradingResultType>::max();
 };
 
 template <typename G>
 struct BoundAccessHelper<true, false, G> {
   static constexpr GradingResultType Minimum = G::Minimum::value;
-  static constexpr GradingResultType Maximum =
-      std::numeric_limits<GradingResultType>::max();
+  static constexpr GradingResultType Maximum
+      = std::numeric_limits<GradingResultType>::max();
 };
 
 template <typename G>
 struct BoundAccessHelper<false, true, G> {
-  static constexpr GradingResultType Minimum =
-      std::numeric_limits<GradingResultType>::min();
+  static constexpr GradingResultType Minimum
+      = std::numeric_limits<GradingResultType>::min();
   static constexpr GradingResultType Maximum = G::Maximum::value;
 };
 
@@ -429,11 +449,13 @@ namespace chomp::core {
 template <Grading G>
 struct BoundAccess {
   /** @brief A value no greater than any returned value from `G` objects. */
-  static constexpr GradingResultType Minimum = detail::BoundAccessHelper<
-      LowerBoundedGrading<G>, UpperBoundedGrading<G>, G>::Minimum;
+  static constexpr GradingResultType Minimum
+      = detail::BoundAccessHelper<LowerBoundedGrading<G>,
+          UpperBoundedGrading<G>, G>::Minimum;
   /** @brief A value no less than any returned value from `G` objects. */
-  static constexpr GradingResultType Maximum = detail::BoundAccessHelper<
-      LowerBoundedGrading<G>, UpperBoundedGrading<G>, G>::Maximum;
+  static constexpr GradingResultType Maximum
+      = detail::BoundAccessHelper<LowerBoundedGrading<G>,
+          UpperBoundedGrading<G>, G>::Maximum;
 };
 
 

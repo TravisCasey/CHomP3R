@@ -102,9 +102,8 @@ TEST_CASE("Grading concepts differentiate correctly", "[complexes]") {
   CHECK(BoundedGrading<BGradingTest>);
 }
 
-TEST_CASE(
-    "CachedGradingWrapper propagates grading concepts correctly", "[complexes]"
-) {
+TEST_CASE("CachedGradingWrapper propagates grading concepts correctly",
+    "[complexes]") {
   CHECK(Grading<CachedGradingWrapper<GradingTest>>);
   CHECK(Grading<CachedGradingWrapper<LBGradingTest>>);
   CHECK(Grading<CachedGradingWrapper<UBGradingTest>>);
@@ -146,12 +145,8 @@ TEST_CASE("SetGrading functions correctly", "[complexes]") {
 }
 
 TEST_CASE("MapGrading functions correctly", "[complexes]") {
-  const std::initializer_list<std::pair<const int, GradingResultType>> ilist = {
-      { 0,  4},
-      { 1,  5},
-      { 2,  7},
-      {20, 10}
-  };
+  const std::initializer_list<std::pair<const int, GradingResultType>> ilist
+      = {{0, 4}, {1, 5}, {2, 7}, {20, 10}};
   constexpr std::size_t MIN = 4;
   constexpr std::size_t MAX = 10;
   const MapGrading<int, MIN, MAX> grade_func(ilist);
@@ -170,25 +165,17 @@ TEST_CASE("MapGrading functions correctly", "[complexes]") {
 }
 
 TEST_CASE("BoundAccess deduces and specializes correctly.", "[complexes]") {
-  CHECK(
-      BoundAccess<GradingTest>::Minimum ==
-      std::numeric_limits<GradingResultType>::min()
-  );
-  CHECK(
-      BoundAccess<GradingTest>::Maximum ==
-      std::numeric_limits<GradingResultType>::max()
-  );
+  CHECK(BoundAccess<GradingTest>::Minimum
+        == std::numeric_limits<GradingResultType>::min());
+  CHECK(BoundAccess<GradingTest>::Maximum
+        == std::numeric_limits<GradingResultType>::max());
 
   CHECK(BoundAccess<LBGradingTest>::Minimum == 2);
-  CHECK(
-      BoundAccess<LBGradingTest>::Maximum ==
-      std::numeric_limits<GradingResultType>::max()
-  );
+  CHECK(BoundAccess<LBGradingTest>::Maximum
+        == std::numeric_limits<GradingResultType>::max());
 
-  CHECK(
-      BoundAccess<UBGradingTest>::Minimum ==
-      std::numeric_limits<GradingResultType>::min()
-  );
+  CHECK(BoundAccess<UBGradingTest>::Minimum
+        == std::numeric_limits<GradingResultType>::min());
   CHECK(BoundAccess<UBGradingTest>::Maximum == 12);
 
   CHECK(BoundAccess<BGradingTest>::Minimum == 2);
