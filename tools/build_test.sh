@@ -2,8 +2,6 @@
 
 # Builds and tests the project.
 # Run from project root directory
-rm -rf build && mkdir build && cd build
-
-cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-make
-ctest --output-on-failure
+cmake --preset chomp-gcc-debug
+make -C ./build/chomp-gcc-debug
+ctest ./build/chomp-gcc-debug --preset default

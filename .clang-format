@@ -3,16 +3,17 @@ BasedOnStyle: LLVM
 ---
 Language: Cpp
 AccessModifierOffset: -2
-AlignAfterOpenBracket: BlockIndent
-AlignArrayOfStructures: Right
+AlignAfterOpenBracket: DontAlign
+AlignArrayOfStructures: None
 AlignEscapedNewlines: Left
 AlignTrailingComments: Never
+AllowAllArgumentsOnNextLine: false
 AllowShortCompoundRequirementOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortLambdasOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Inline
 AlwaysBreakTemplateDeclarations: true
 BitFieldColonSpacing: Both
-BreakBeforeBinaryOperators: None
+BreakBeforeBinaryOperators: All
 BreakBeforeBraces: Attach
 BreakBeforeConceptDeclarations: Always
 BreakBeforeTernaryOperators: true
@@ -45,6 +46,7 @@ KeepEmptyLinesAtEOF: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 2
 NamespaceIndentation: None
+PackConstructorInitializers: NextLineOnly
 PointerAlignment: Left
 QualifierAlignment: Left
 ReferenceAlignment: Left

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.31)
 
 set(PROJECT_DESCRIPTION "Computational Homology Project 3 (Redux)")
 set(ONLINE_REPOSITORY "https://github.com/TravisCasey/CHomP3R")
@@ -12,15 +12,17 @@ project(
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23 -Wall -Wextra -O3")
-set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
-find_package(Catch2 3 REQUIRED)
-include(CTest)
-include(Catch)
+if(CATCH2_TEST)
+    find_package(Catch2 3 REQUIRED)
+    include(CTest)
+    include(Catch)
+endif()
 
 set(CHOMP_DIR ${PROJECT_SOURCE_DIR}/chomp)
 add_subdirectory(${CHOMP_DIR})
 
-target_include_directories(tests PRIVATE chomp)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+if(CATCH2_TEST)
+    target_include_directories(tests PRIVATE chomp)
+    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+endif()
