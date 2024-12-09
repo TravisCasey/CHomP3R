@@ -29,122 +29,427 @@
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 namespace chomp::core {
 
 /**
- * @brief Array type denoting the location of an orthant on the hypercubical
- * grid. Each entry is a coordinate along each axis forming an ordered tuple.
+ * @brief Represents an ordered tuple of points in a `CCDIM`-dimensional
+ * hypercubical grid.
+ *
+ * A (closed, unit) orthant is the union of all cubical cells in the grid whose
+ * closures share a vertex (in the grid) as their least point. This effectively
+ * partitions the hypercubical grid as a cubical complex, with each equivalence
+ * class corresponding to a vertex; this representation is encapsulated by the
+ * `Orthant` class.
+ *
+ * The interface of `Orthant` follows that of `std::array`, with heap-allocated
+ * members and improved move semantics.
  *
  * @tparam CCDIM The ambient dimension of the hypercubical grid, i.e., the
- * number of axes and thus the number of entries in the array.
+ * number of axes and thus the number of entries in the ordered tuple.
+ *
+ * @sa Cube
  */
 template <std::size_t CCDIM>
-using CubeOrthant = std::array<HypercubeCoordinate, CCDIM>;
+class Orthant {
+public:
+  /** @brief Underlying array type wrapped by this class template. */
+  using ArrayType = std::array<HypercubeCoordinate, CCDIM>;
+  /**
+   * @brief Underlying pointer type to `ArrayType` returned by reference from
+   * the `data` method.
+   */
+  using PointerType = std::unique_ptr<ArrayType>;
+  /** @brief Iterator type propagated from `ArrayType`. */
+  using IterType = typename ArrayType::iterator;
+  /** @brief `const` iterator type propagated from `ArrayType`. */
+  using CIterType = typename ArrayType::const_iterator;
+  /** @brief Reverse iterator type propagated from `ArrayType`. */
+  using RIterType = typename ArrayType::reverse_iterator;
+  /** @brief `const` reverse iterator type propagated from `ArrayType`. */
+  using CRIterType = typename ArrayType::const_reverse_iterator;
+
+private:
+  PointerType coordinate_ptr;
+
+public:
+  /**
+   * @brief Default constructor creates a new `Orthant` object with all
+   * coordinates zero (i.e. the orthant at the origin).
+   */
+  Orthant() :
+      coordinate_ptr(std::make_unique<ArrayType>()) {}
+  /**
+   * @brief Copy constructor heap allocates a new container with coordinates
+   * identical to `other` for the newly-constructed object.
+   */
+  Orthant(const Orthant& other) :
+      coordinate_ptr(std::make_unique<ArrayType>(*(other.coordinate_ptr))) {}
+  /**
+   * @brief Move constructor transfers ownership of the container to the
+   * newly-constructed object without allocating new memory on the heap.
+   *
+   * The moved-from `Orthant` object is left in an invalid state, but may be
+   * assigned-to as usual.
+   */
+  Orthant(Orthant&&) = default;
+  /**
+   * @brief Construct an `Orthant` object by populating the container with
+   * the elements of `coordinate_ilist`.
+   *
+   * Unpopulated entries are left as zero, while entries beyond the first
+   * `CCDIM` are ignored.
+   */
+  constexpr Orthant(
+      std::initializer_list<HypercubeCoordinate> coordinate_ilist) :
+      coordinate_ptr(std::make_unique<ArrayType>()) {
+    std::size_t axis = 0;
+    for (const HypercubeCoordinate& coord : coordinate_ilist) {
+      (*coordinate_ptr)[axis++] = coord;
+      if (axis == CCDIM) {
+        break;
+      }
+    }
+  }
+
+  /**
+   * @brief Copy assignment overwrites each coordinate in the container with a
+   * copy of the corresponding coordinate in `other`.
+   *
+   * If the object is in an invalid state (namely, after being moved from), a
+   * new container is allocated and copy-constructed from that of `other`.
+   *
+   * @return Orthant& Reference to this `Orthant` object.
+   */
+  Orthant& operator=(const Orthant& other) {
+    if (coordinate_ptr) {
+      *coordinate_ptr = *(other.coordinate_ptr);
+    } else {
+      coordinate_ptr = std::make_unique<ArrayType>(*(other.coordinate_ptr));
+    }
+    return *this;
+  }
+  /**
+   * @brief The move assignment operator transfers ownership of the container
+   * without allocating new memory om the heap.
+   *
+   * @return Orthant& Reference to this `Orthant` object.
+   */
+  Orthant& operator=(Orthant&&) = default;
+
+  /** @brief Destruct this `Orthant` object and its heap-allocated container. */
+  ~Orthant() = default;
+
+  /**
+   * @brief Get the size of the container, which is always equal to the `CCDIM`
+   * template parameter.
+   */
+  [[nodiscard]] constexpr std::size_t size() const noexcept {
+    return CCDIM;
+  }
+
+  /**
+   * @brief Return by reference a pointer to the array underyling this object.
+   *
+   * @return PointerType& A reference to `PointerType` pointing to the
+   * underlying array of coordinates.
+   */
+  [[nodiscard]] PointerType& data() noexcept {
+    return coordinate_ptr;
+  }
+  /** @overload */
+  [[nodiscard]] const PointerType& data() const noexcept {
+    return coordinate_ptr;
+  }
+
+  /** @brief Access the coordinate at `axis` in the container. */
+  [[nodiscard]] HypercubeCoordinate& operator[](const std::size_t axis) {
+    return (*coordinate_ptr)[axis];
+  }
+  /** @overload */
+  [[nodiscard]] const HypercubeCoordinate& operator[](
+      const std::size_t axis) const {
+    return (*coordinate_ptr)[axis];
+  }
+
+  /** @brief Return an iterator to the beginning of the container. */
+  [[nodiscard]] IterType begin() noexcept {
+    return coordinate_ptr->begin();
+  }
+  /** @overload */
+  [[nodiscard]] CIterType begin() const noexcept {
+    return coordinate_ptr->begin();
+  }
+  /** @brief Return a `const` iterator to the beginning of the container. */
+  [[nodiscard]] CIterType cbegin() const noexcept {
+    return coordinate_ptr->cbegin();
+  }
+  /** @brief Return a reverse iterator to the end of the container. */
+  [[nodiscard]] RIterType rbegin() noexcept {
+    return coordinate_ptr->rbegin();
+  }
+  /** @overload */
+  [[nodiscard]] CRIterType rbegin() const noexcept {
+    return coordinate_ptr->rbegin();
+  }
+  /** @brief Return a reverse `const` iterator to the end of the container. */
+  [[nodiscard]] CRIterType crbegin() const noexcept {
+    return coordinate_ptr->crbegin();
+  }
+  /** @brief Return an iterator to the end of the container. */
+  [[nodiscard]] IterType end() noexcept {
+    return coordinate_ptr->end();
+  }
+  /** @overload */
+  [[nodiscard]] CIterType end() const noexcept {
+    return coordinate_ptr->end();
+  }
+  /** @brief Return a `const` iterator to the end of the container. */
+  [[nodiscard]] CIterType cend() const noexcept {
+    return coordinate_ptr->cend();
+  }
+  /** @brief Return a reverse iterator to the beginning of the container. */
+  [[nodiscard]] RIterType rend() noexcept {
+    return coordinate_ptr->rend();
+  }
+  /** @overload */
+  [[nodiscard]] CRIterType rend() const noexcept {
+    return coordinate_ptr->rend();
+  }
+  /**
+   * @brief Return a `const` reverse iterator to the beginning of the container.
+   */
+  [[nodiscard]] CRIterType crend() const noexcept {
+    return coordinate_ptr->crend();
+  }
+
+  /** @brief Coordinate-wise equality comparison in this container and `rhs`. */
+  [[nodiscard]] bool operator==(const Orthant& rhs) const {
+    return *(coordinate_ptr) == *(rhs.coordinate_ptr);
+  }
+  /**
+   * @brief Coordinate-wise three-way comparison on entries in this container
+   * and `rhs`.
+   *
+   * @return std::strong_ordering The result of three-way comparison on the
+   * first pair of non-equivalent entries in this object and `rhs` should such
+   * entries exist. Else, returns `std::strong_ordering::equal`.
+   */
+  [[nodiscard]] std::strong_ordering operator<=>(const Orthant& rhs) const {
+    return *(coordinate_ptr) <=> *(rhs.coordinate_ptr);
+  }
+};
 
 /**
- * @brief A hypercube embedded in `CCDIM`-dimensional space. This is the cell
- * type for the `CubicalComplex` chain complex.
+ * @brief A cubical cell residing in a `CCDIM`-dimensional hypercubical grid.
  *
- * Importantly, the `CCDIM` template parameter is the dimension of the ambient
- * space in which the associated cubical complex (and this cube) is embedded;
- * this is not the dimension of the cube as a cell of that complex. The
- * dimension of the cube itself is accessible via the `dimension` method.
+ * Geometrically, a cubical cell (represented by this object) is a cartesian
+ * product of `CCDIM` intervals, which are either open unit intervals or
+ * signular points. It is oriented in the grid naturally, with the corners of
+ * its closure each being a vertex in the hypercubical grid.
  *
- * Each cube comprises an orthant (see `CubeOrthant`) and a shape integer that
- * has each bit 1 or 0 depending if the cube has extent along the corresponding
- * axis.
+ * The representation of a cubical cell in this program is a pair of orthants:
+ * the base orthant and the dual orthant. Each orthant contains one
+ * `CCDIM`-dimensional cubical cell (namely, the open `CCDIM`-cube). Each
+ * cubical cell can be expressed as the intersection of the closure of two such
+ * cubes, which correspond to the `CCDIM`-cubes in the base and dual orthants.
+ * The base orthant further is the orthant in which the cubical cell resides.
  *
- * @tparam CCDIM The dimension of the hypercubical grid in which the associated
- * cubical complex and this cube is embedded. Not the dimension of this cell as
- * a cell of said complex.
+ * An alternative but equivalent representation offered comprises the base
+ * `Orthant` and an unsigned integer (namely, `std::size_t`) representing its
+ * shape that has a bit set if the cubical cell has a unit interval along the
+ * corresponding axis in its cartesian product. If it instead has a singular
+ * point, the bit is not set. The `extent` method calculates this integer, and a
+ * `Cube` can be constructed from this paremter instead.
  *
- * @sa `CubicalComplex`, `CubeOrthant`
+ * Algebraically, this is the cell type of the `CubicalComplex` class. Its chain
+ * group corresponds to its dimension as a cell, which is the number of unit
+ * intervals in its product (accessible by the `dimension` method). It is
+ * hashable and ordered by its underlying `Orthant` objects.
+ *
+ * @tparam CCDIM The ambient dimension of the hypercubical grid. This matches
+ * the `CCDIM` template parameter for the associated `Orthant` class.
+ *
+ * @sa Orthant, CubicalComplex
  */
 template <std::size_t CCDIM>
 class Cube {
 private:
-  CubeOrthant<CCDIM> cube_orthant;
-  std::size_t cube_extent;
+  Orthant<CCDIM> dual_orthant;
+  Orthant<CCDIM> base_orthant;
+
+  [[nodiscard]] static Orthant<CCDIM> dual_from_extent(
+      const Orthant<CCDIM>& base, const std::size_t extent) {
+    Orthant<CCDIM> dual(base);
+    std::size_t axis = 0;
+    std::size_t axis_flag = 1;
+    for (; axis != CCDIM; ++axis, axis_flag <<= 1) {
+      if (!(extent & axis_flag)) {
+        --dual[axis];
+      }
+    }
+    return dual;
+  }
 
 public:
-  /** @brief Default initialize a `Cube` object. */
+  /**
+   * @brief Default construct a `Cube` with default-constructed `Orthant`
+   * objects.
+   *
+   * The resulting cube is the `CCDIM`-dimensional cubical cell in the
+   * orthant at the origin of the hypercubical grid.
+   */
   Cube() = default;
-  /**
-   * @brief Initialize a `Cube` instance by providing an orthant and an extent
-   * parameter.
-   *
-   * @param cube_orthant Location of the orthant this cube is in.
-   * @param cube_extent Shape of this cube with each bit 1 or 0 depending on if
-   * the cube has extent along the corresponding axis.
-   */
-  Cube(const CubeOrthant<CCDIM>& cube_orthant, std::size_t cube_extent) :
-      cube_orthant(cube_orthant), cube_extent(cube_extent) {}
-  /** @copydoc Cube(const CubeOrthant<CCDIM>&, std::size_t) */
-  Cube(CubeOrthant<CCDIM>&& cube_orthant, std::size_t cube_extent) :
-      cube_orthant(std::move(cube_orthant)), cube_extent(cube_extent) {}
 
   /**
-   * @brief Get the orthant of this cube.
+   * @brief Construct a `Cube` by supplying a base and dual `Orthant` objects.
    *
-   * @return const CubeOrthant<CCDIM>&
+   * See the `Cube` docstring for the geometric description of these objects.
+   *
+   * @param base The orthant in which the cubical cell represented by the
+   * newly-constructed `Cube` object resides.
+   * @param dual See the `Cube` docstring.
    */
-  [[nodiscard]] const CubeOrthant<CCDIM>& orthant() const noexcept {
-    return cube_orthant;
+  Cube(const Orthant<CCDIM>& base, const Orthant<CCDIM>& dual) :
+      dual_orthant(dual), base_orthant(base) {}
+  /** @overload */
+  Cube(const Orthant<CCDIM>& base, Orthant<CCDIM>&& dual) :
+      dual_orthant(std::move(dual)), base_orthant(base) {}
+  /** @overload */
+  Cube(Orthant<CCDIM>&& base, const Orthant<CCDIM>& dual) :
+      dual_orthant(dual), base_orthant(std::move(base)) {}
+  /** @overload */
+  Cube(Orthant<CCDIM>&& base, Orthant<CCDIM>&& dual) :
+      dual_orthant(std::move(dual)), base_orthant(std::move(base)) {}
+
+  /**
+   * @brief Construct a `Cube` by supplying a base `Orthant` object and an
+   * extent paramter.
+   *
+   * See the `Cube` docstring for the geometric description of these objects.
+   * Note that the dual `Orthant` must be constructed from `base` and `extent`,
+   * which is linear in the `CCDIM` template parameter.
+   *
+   * @param base The orthant in which the cubical cell represented by the
+   * newly-constructed `Cube` object resides.
+   * @param extent See the `Cube` docstring.
+   */
+  Cube(const Orthant<CCDIM>& base, const std::size_t extent) :
+      dual_orthant(dual_from_extent(base, extent)), base_orthant(base) {}
+  /** @overload */
+  Cube(Orthant<CCDIM>&& base, const std::size_t extent) :
+      dual_orthant(dual_from_extent(base, extent)),
+      base_orthant(std::move(base)) {}
+
+  /** @brief Return a reference to the base `Orthant` object. */
+  [[nodiscard]] Orthant<CCDIM>& base() noexcept {
+    return base_orthant;
+  }
+  /** @overload */
+  [[nodiscard]] const Orthant<CCDIM>& base() const noexcept {
+    return base_orthant;
+  }
+  /** @brief Return a reference to the dual `Orthant` object. */
+  [[nodiscard]] Orthant<CCDIM>& dual() noexcept {
+    return dual_orthant;
+  }
+  /** @overload */
+  [[nodiscard]] const Orthant<CCDIM>& dual() const noexcept {
+    return dual_orthant;
   }
 
   /**
-   * @brief Get the shape parameter of this cube.
-   *
-   * @return std::size_t
+   * @brief Return a reference to the coordinate along `axis` in the base
+   * orthant of this `Cube` object.
    */
-  [[nodiscard]] std::size_t extent() const noexcept {
-    return cube_extent;
+  [[nodiscard]] HypercubeCoordinate& base(std::size_t axis) {
+    return base_orthant[axis];
+  }
+  /** @overload */
+  [[nodiscard]] const HypercubeCoordinate& base(std::size_t axis) const {
+    return base_orthant[axis];
+  }
+  /**
+   * @brief Return a reference to the coordinate along `axis` in the dual
+   * orthant of this `Cube` object.
+   */
+  [[nodiscard]] HypercubeCoordinate& dual(std::size_t axis) {
+    return dual_orthant[axis];
+  }
+  /** @overload */
+  [[nodiscard]] const HypercubeCoordinate& dual(std::size_t axis) const {
+    return dual_orthant[axis];
   }
 
   /**
-   * @brief Get the dimension of the cube; this is the dimension of the chain
-   * group in which it belongs, not the ambient dimension of the space.
+   * @brief Compute and return the shape parameter of the cubical cell
+   * represented by this `Cube` object.
    *
-   * @return std::size_t
+   * Note this parameter is not stored, and must be calculated each time; this
+   * computation is linear in the `CCDIM` template parameter.
+   *
+   * @return std::size_t An integer that has a bit set iff the cubical cell has
+   * a unit interval in its cartesian product along the corresponding axis. See
+   * the `Cube` docstring for more details.
    */
-  [[nodiscard]] std::size_t dimension() const noexcept {
-    return std::popcount(cube_extent);
+  [[nodiscard]] std::size_t extent() const {
+    std::size_t extent = 0;
+    std::size_t axis = 0;
+    std::size_t axis_flag = 1;
+    for (; axis != CCDIM; ++axis, axis_flag <<= 1) {
+      if (base_orthant[axis] == dual_orthant[axis]) {
+        extent += axis_flag;
+      }
+    }
+    return extent;
   }
 
   /**
-   * @brief Equality of `Cube` instances is based on equality of orthant and
-   * extent/shape parameters.
+   * @brief Compute and return the dimension of the cubical cell represented by
+   * this `Cube` object.
    *
-   * @param rhs
-   * @return true
-   * @return false
+   * Note that this is the dimension of the chain group in which it resides,
+   * not the ambient dimension of the space.
+   *
+   * Equivalently, this is the number of axes (between 0 and the template
+   * parameter `CCDIM`) along which the `Cube` object has a unit interval in its
+   * cartesian product.
    */
-  [[nodiscard]] bool operator==(const Cube& rhs) const noexcept {
-    return cube_orthant == rhs.cube_orthant && cube_extent == rhs.cube_extent;
+  [[nodiscard]] std::size_t dimension() const {
+    std::size_t extent_count = 0;
+    for (std::size_t axis = 0; axis != CCDIM; ++axis) {
+      if (base_orthant[axis] == dual_orthant[axis]) {
+        ++extent_count;
+      }
+    }
+    return extent_count;
   }
 
+  /**
+   * @brief Equality of `Cube` instances is based on equality of the base and
+   * dual orthants in this object and `rhs`.
+   */
+  [[nodiscard]] bool operator==(const Cube& rhs) const = default;
   /**
    * @brief Three-way comparison operator synthesizes comparison operators
    * between `Cube` instances.
    *
-   * Notably, this enables the use of `Cube` as a basis for module classes.
+   * Notably, this enables the use of `Cube` as a basis for ordered module
+   * classes.
    *
-   * The ordering scheme is based first on the shape/extent parameter as an
-   * integer then the orthant lexographically.
+   * The ordering scheme is first three-way-comparison on the base `Orthant`
+   * object. If they do not compare equal, return this result. Else, the result
+   * of three-way-comparison on the dual `Orthant` object is returned.
    */
-  [[nodiscard]] std::strong_ordering operator<=>(const Cube& rhs
-  ) const noexcept {
-    if (cube_extent < rhs.cube_extent ||
-        (cube_extent == rhs.cube_extent && cube_orthant < rhs.cube_orthant)) {
-      return std::strong_ordering::less;
-    }
-    if (cube_extent > rhs.cube_extent ||
-        (cube_extent == rhs.cube_extent && cube_orthant > rhs.cube_orthant)) {
-      return std::strong_ordering::greater;
-    }
-    return std::strong_ordering::equivalent;
+  [[nodiscard]] std::strong_ordering operator<=>(const Cube& rhs) const {
+    std::strong_ordering base_comp = base_orthant <=> rhs.base_orthant;
+    return base_comp != std::strong_ordering::equal
+               ? base_comp
+               : dual_orthant <=> rhs.dual_orthant;
   }
 };
 
@@ -152,27 +457,49 @@ public:
 
 namespace std {
 
-/** @brief Hash specialization for `CubeOrthant` class template. */
+/** @brief `std::hash` specialization for the `Orthant` class template. */
 template <size_t CCDIM>
-struct hash<chomp::core::CubeOrthant<CCDIM>> {
-  /** @brief Hash the orthant by prime combinations of its axis values. */
-  size_t operator()(const chomp::core::CubeOrthant<CCDIM>& orthant) const {
-    constexpr size_t PRIME = chomp::core::CUBE_HASH_PRIME;
-    size_t hash_result = 0;
-    for (size_t axis = 0; axis < CCDIM; ++axis) {
-      hash_result = PRIME * hash_result + orthant[axis];
+struct hash<chomp::core::Orthant<CCDIM>> {
+private:
+  constexpr static size_t PRIME = 31;
+  constexpr static size_t INITIAL = 15605072507422122298ULL;
+
+public:
+  /** @brief Compute and return the hash of `orthant`. */
+  [[nodiscard]] size_t operator()(
+      const chomp::core::Orthant<CCDIM>& orthant) const noexcept {
+    size_t hash = INITIAL;
+    for (chomp::core::HypercubeCoordinate coordinate : orthant) {
+      hash = PRIME * hash + coordinate;
     }
-    return hash_result;
+    return hash;
   }
 };
 
-/** @brief Hash specialization for `Cube` class template. */
+/** @brief `std::hash` specialization for the `Cube` class template. */
 template <size_t CCDIM>
 struct hash<chomp::core::Cube<CCDIM>> {
-  /** @brief Hash the `Cube` by its orthant and its extent/shape parameter. */
-  size_t operator()(const chomp::core::Cube<CCDIM>& cube) const {
-    return hash<chomp::core::CubeOrthant<CCDIM>>{}(cube.orthant()) ^
-           (cube.extent() << (chomp::core::SIZE_T_BITS - CCDIM));
+private:
+  // Inspiration/Credit: Wolfgang Brehm, StackOverflow.
+
+  static constexpr size_t alt = 0x5555555555555555ULL;
+  static constexpr size_t ran = 17316035218449499591ULL;
+  static constexpr size_t dig = numeric_limits<size_t>::digits;
+
+  [[nodiscard]] static size_t xorshift(size_t n, size_t shift) noexcept {
+    return n ^ (n >> shift);
+  }
+
+  [[nodiscard]] static size_t distribute(size_t n) noexcept {
+    return ran * xorshift(alt * xorshift(n, dig / 2), dig / 2);
+  }
+
+public:
+  /** @brief Compute and return the hash of `cube`. */
+  [[nodiscard]] size_t operator()(
+      const chomp::core::Cube<CCDIM>& cube) const noexcept {
+    hash<chomp::core::Orthant<CCDIM>> hasher;
+    return rotl(hasher(cube.base()), dig / 3) ^ distribute(hasher(cube.dual()));
   }
 };
 
@@ -181,213 +508,635 @@ struct hash<chomp::core::Cube<CCDIM>> {
 namespace chomp::core {
 
 /**
- * @brief An iterator over all cubes in the hypercubical grid.
+ * @brief This class template is a input iterator (modeling the concept
+ * `std::input_iterator`) of dual `Orthant` objects and equivalent integer shape
+ * parameters associated with cubes between (in the sense of the face partial
+ * order) a maximum and minimum cubical cell; all objects are assumed to reside
+ * in the same base orthant.
  *
- * This iterator functions by wrapping an iterator over the orthants, then
- * iterating over each cube in each orthant.
+ * Combining the dereferenced dual `Orthant` object (or alternatively, the shape
+ * parameter) with the base `Orthant` object in which the iteration takes place,
+ * this is effectively an iterator over all cubical cells (as `Cube` objects)
+ * residing in the base orthant. Under this identification, this iterator class
+ * template is a breadth-first traversal of (part of) the Hasse diagram in the
+ * face partial order of cubes residing in the base orthant.
  *
- * This is used for cell iteration in `CubicalComplex` objects when wrapping a
- * `LexOrthantIterator`. However, note that the number of cells in a cubical
- * complex grows quickly in a high-dimensional grid, making individual iteration
- * over cells inefficient.
+ * For more information on the identification of base/dual orthants, cubical
+ * cells, and shape parameters, see the `Cube` class template docstring.
  *
- * @tparam CCDIM The dimension of the ambient hypercubical grid.
- * @tparam I The orthant iterator type; must be at least a forward iterator and
- * return orthants when dereferenced.
+ * @tparam CCDIM The ambient dimension of the hypercubical grid. This matches
+ * the `CCDIM` template parameter of the associated `Orthant` class template.
+ *
+ * @sa `Cube`, `Orthant`
  */
-template <std::size_t CCDIM, std::forward_iterator I>
-requires requires(I it) {
-  { *it } -> std::convertible_to<CubeOrthant<CCDIM>>;
-}
-class BasicCubeIterator {
-private:
-  I orthant_iterator;
-  std::size_t current_extent;
-
+template <std::size_t CCDIM>
+class BFSDualOrthantIterator {
 public:
   /** @brief Difference type between iterators. */
   using difference_type = std::ptrdiff_t;
-  /** @brief Value type when dereferenced. */
-  using value_type = Cube<CCDIM>;
-  /** @brief Pointer type. */
-  using pointer = value_type*;
-  /** @brief Reference type. */
-  using reference = value_type&;
-  /** @brief Tag for `iterator_traits`. */
-  using iterator_concept = std::forward_iterator_tag;
+  /**
+   * @brief The iterator value type, which is a pair containing a (dual)
+   * `Orthant` object and equivalent (in context of a shared base orthant) shape
+   * parameter.
+   *
+   * When iterators of this class template are dereferenced they yield a
+   * `const`-qualified references to this type.
+   */
+  using value_type = std::pair<Orthant<CCDIM>, std::size_t>;
+  /**
+   * @brief Reference type to `const` `value_type`; returned when objects of
+   * this class are dereferenced.
+   */
+  using reference = const value_type&;
+  /**
+   * @brief Pointer type to `const` `value_type` returned by the `->` operator.
+   */
+  using pointer = const value_type*;
+  /** @brief Input iterator tag for `iterator_traits` */
+  using iterator_concept = std::input_iterator_tag;
 
-  /**
-   * @brief Default initialize a new BasicCubeIterator object.
-   *
-   * Unusable in this state but can be assigned to, as normal.
-   */
-  BasicCubeIterator() = default;
-  /**
-   * @brief Construct a new BasicCubeIterator by passing an orthant iterator.
-   *
-   * @param it A forward iterator over the orthants in the hypercubical grid.
-   */
-  explicit BasicCubeIterator(I it) : orthant_iterator(it), current_extent(0) {}
+private:
+  /*
+  Implementation Notes:
 
-  /**
-   * @brief Dereferencing this iterator yields a cube in the associated
-   * `CubicalComplex`.
-   *
-   * @return Cube<CCDIM>
-   */
-  [[nodiscard]] Cube<CCDIM> operator*() const {
-    return Cube<CCDIM>(*orthant_iterator, current_extent);
-  }
+  This iterator is designed for the cubical Morse reduction-based homology
+  algorithm, but may be used in other contexts. The cubical homology algorithm
+  uses both the dual orthant and extent parameter interchangeably as their
+  representations are both useful. This is why the iterator yields pairs of
+  these objects.
 
-  /**
-   * @brief Equality operates first on the extent in this iterator and secondly
-   * on the wrapped orthant iterator.
-   *
-   * @param rhs
-   * @return true
-   * @return false
-   */
-  [[nodiscard]] bool operator==(const BasicCubeIterator& rhs) const {
-    if (current_extent != rhs.current_extent) {
-      return false;
+  As the prior algorithm will ideally not require iterating the entire graph, we
+  compute the partial Hasse diagram lazily. The graph is computed in the
+  breadth-first order in the dynamic array `arr`, whose length is 2^n; n being
+  the number of inequivalent axes in the supplied minimum and maximum orthants
+  (which is the number of vertices in the partial Hasse diagram).
+
+  The computation uses a slow pointer from which new values are computed and a
+  fast pointer which points to the newest computed value (returned when the
+  iterator is dereferenced). New values are computed from old by decrementing
+  axis values along which the old value is not equal to the minimum orthant axis
+  value. If the maximum and minimum orthants agree on an axis, this can never
+  happen; hence `axes` holds the axes along which differences may occur. It is
+  implemented as a static array of length `CCDIM` (a relatively small number),
+  although the effective length (demarcated by `axes_end_it`) may be shorter.
+
+  Iteration ends once the slow pointer passes the end of `arr`, where it
+  surpasses the fast pointer. The bool conversion operator marks the end, beyond
+  which incrementing the iterator is ineffective. Sentinels are not used for
+  this iterator.
+
+  Due to the pointers and dynamic arrays this class is not trivially copyable.
+  It is unnecessary in the current implementation of algorithms to do so as well
+  as quite inefficient as `arr` would need copying as well.
+
+  From the lack of copying and sentinels this class only models the input
+  iterator concept and not the forward iterator concept. If necessary, the class
+  can be made to model the forward iterator concept but the required features
+  may be significantly more inefficient or contrived.
+  */
+
+  Orthant<CCDIM> minimum_orthant;
+  Orthant<CCDIM> maximum_orthant;
+
+  std::unique_ptr<value_type[]> arr{};
+  value_type* slow_it;
+  value_type* fast_it;
+
+  std::array<std::size_t, CCDIM> axes{};
+  std::size_t* axes_it = axes.data();
+  std::size_t* axes_end_it = axes.data();
+
+  void iniitalize_arr(const std::size_t maximum_extent) {
+    std::size_t n = 0;
+    for (std::size_t axis = 0; axis != CCDIM; ++axis) {
+      if (minimum_orthant[axis] != maximum_orthant[axis]) {
+        *axes_end_it = axis;
+        ++axes_end_it;
+        ++n;
+      }
     }
-    return orthant_iterator == rhs.orthant_iterator;
+    arr = std::make_unique_for_overwrite<value_type[]>(1 << n);
+    fast_it = arr.get();
+    slow_it = arr.get();
+    *fast_it = {maximum_orthant, maximum_extent};
+  }
+
+  [[nodiscard]] static Orthant<CCDIM> decrement_axes(
+      const Orthant<CCDIM>& base) {
+    Orthant<CCDIM> minimum(base);
+    for (std::size_t axis = 0; axis != CCDIM; ++axis) {
+      --minimum[axis];
+    }
+    return minimum;
+  }
+
+public:
+  /** @brief Copy construction is not available for this class template. */
+  BFSDualOrthantIterator(const BFSDualOrthantIterator&) = delete;
+  /** @brief Default move construction. */
+  BFSDualOrthantIterator(BFSDualOrthantIterator&&) = default;
+  /** @brief Copy assignment is not available for this class template. */
+  BFSDualOrthantIterator& operator=(const BFSDualOrthantIterator&) = delete;
+  /** @brief Default move assignment. */
+  BFSDualOrthantIterator& operator=(BFSDualOrthantIterator&&) = default;
+  /** @brief Default destructor. */
+  ~BFSDualOrthantIterator() = default;
+
+  /**
+   * @brief Construct a new BFSDualOrthantIterator object by supplying the
+   * `minimum` and `maximum` `Orthant` objects the iterator traverses between.
+   *
+   * While no base `Orthant` object is explicitly supplied, all traversal must
+   * occur within the same orthant. Hence, each axis of `maximum` must agree
+   * with that of `minimum` or exceed it by one.
+   *
+   * The optional `maximum_extent` shape parameter marks the shape of the
+   * maximum cell (represented by the `maximum` `Orthant` object). This
+   * implicitly determines the base orthant and allows for greater control over
+   * the range iterated. The default value assumes the maximum cubical cell is
+   * the single `CCDIM`-dimensional cell based in each orthant.
+   */
+  BFSDualOrthantIterator(const Orthant<CCDIM>& minimum,
+      const Orthant<CCDIM>& maximum,
+      std::size_t maximum_extent = (1 << CCDIM) - 1) :
+      minimum_orthant(minimum), maximum_orthant(maximum) {
+    iniitalize_arr(maximum_extent);
+  }
+  /** @overload */
+  BFSDualOrthantIterator(const Orthant<CCDIM>& minimum,
+      Orthant<CCDIM>&& maximum, std::size_t maximum_extent = (1 << CCDIM) - 1) :
+      minimum_orthant(minimum), maximum_orthant(std::move(maximum)) {
+    iniitalize_arr(maximum_extent);
+  }
+  /** @overload */
+  BFSDualOrthantIterator(Orthant<CCDIM>&& minimum,
+      const Orthant<CCDIM>& maximum,
+      std::size_t maximum_extent = (1 << CCDIM) - 1) :
+      minimum_orthant(std::move(minimum)), maximum_orthant(maximum) {
+    iniitalize_arr(maximum_extent);
+  }
+  /** @overload */
+  BFSDualOrthantIterator(Orthant<CCDIM>&& minimum, Orthant<CCDIM>&& maximum,
+      std::size_t maximum_extent = (1 << CCDIM) - 1) :
+      minimum_orthant(std::move(minimum)), maximum_orthant(std::move(maximum)) {
+    iniitalize_arr(maximum_extent);
+  }
+  /**
+   * @brief Construct a new BFSDualOrthantIterator object iterating over every
+   * cubical cell residing in the orthant represented by the `base` `Orthant`
+   * object.
+   */
+  BFSDualOrthantIterator(const Orthant<CCDIM>& base) :
+      BFSDualOrthantIterator(decrement_axes(base), base) {}
+
+  /**
+   * @brief Dereference the iterator, yielding a constant reference to the
+   * currently pointed-to `Orthant` and shape parameter pair.
+   *
+   * Note that the pointed-to object is always valid, even if the iterator is
+   * in its terminal state. Further incrementing will leave it unchanged,
+   * however.
+   *
+   * @return reference A reference to `const` `std::pair` containing an
+   * `Orthant` object and an unsigned integer; both equivalently represent a
+   * cubical cell currently pointed to by this iterator.
+   */
+  [[nodiscard]] reference operator*() const noexcept {
+    return *fast_it;
+  }
+  /**
+   * @brief Access the pointed-to `Orthant`, shape parameter pair via a pointer.
+   *
+   * Note that the pointed-to object is always valid, even if the iterator is
+   * in its terminal state. Further incrementing will leave it unchanged,
+   * however.
+   *
+   * @return pointer A pointer to `const` `std::pair` containing an `Orthant`
+   * object and an unsigned integer; both equivalently represent a cubical cell
+   * currently pointed to by this iterator.
+   */
+  [[nodiscard]] pointer operator->() const noexcept {
+    return fast_it;
   }
 
   /**
-   * @brief Preincrememnt increments extent parameter first, then increments
-   * wrapped orthant iterator when extent parameter has reached its max value.
+   * @brief Increment the iterator, computing the next value and moving the
+   * pointer forward.
    *
-   * @return BasicCubeIterator&
+   * Has no effect if the iterator is terminal, denoted by the bool conversion
+   * operator returning `false`.
+   *
+   * @return BFSDualOrthantIterator& Reference to this object.
    */
-  BasicCubeIterator& operator++() {
-    ++current_extent;
-    if (current_extent == 1 << CCDIM) {
-      ++orthant_iterator;
-      current_extent = 0;
+  BFSDualOrthantIterator& operator++() {
+    for (; slow_it <= fast_it; ++slow_it, axes_it = axes.data()) {
+      if (axes_it != axes_end_it
+          && minimum_orthant[*axes_it] != slow_it->first[*axes_it]) {
+        ++fast_it;
+        *fast_it = *slow_it;
+        --fast_it->first[*axes_it];
+        fast_it->second -= (1 << *axes_it);
+        ++axes_it;
+        return *this;
+      }
     }
     return *this;
   }
   /**
-   * @brief Postincrement operates as normal.
+   * @brief Postincrement functions the same as preincrement; no copies are
+   * made.
+   *
+   * @return BFSDualOrthantIterator& Reference to this object.
    */
-  BasicCubeIterator operator++(int) {
-    BasicCubeIterator temp(*this);
-    ++*this;
-    return temp;
+  BFSDualOrthantIterator& operator++(int) {
+    return ++*this;
+  }
+
+  /**
+   * @brief Return `true` if the iterator is not in its terminal state. Else,
+   * return `false`.
+   *
+   * Further incrementing has no effect once this reads false, and dereferencing
+   * will yield the minimum orthant only.
+   */
+  [[nodiscard]] explicit operator bool() const noexcept {
+    return slow_it <= fast_it;
   }
 };
 
 /**
- * @brief An iterator over the orthants of a hypercubical grid in a
- * lexicographical order.
+ * @brief A forward iterator class over all orthants in the hypercubical grid
+ * lexicographically.
  *
- * The grid is defined by a minimum orthant and a maximum orthant; starting at
- * any orthant between these two, the iterator moves along each axis from `0` to
- * `CCDIM - 1` and increments until it reaches the maximum orthant.
- *
- * Used for cell iteration in `CubicalComplex` objects when wrapped with a
- * `BasicCubeIterator` object.
- *
- * @tparam CCDIM The number of dimensions of the hypercubical grid.
+ * @tparam CCDIM The ambient dimension of the hypercubical grid. This matches
+ * the `CCDIM` template parameter of the associated `Orthant` class template.
  */
 template <std::size_t CCDIM>
 class LexOrthantIterator {
 private:
-  CubeOrthant<CCDIM> minimum_orthant;
-  CubeOrthant<CCDIM> maximum_orthant;
-  CubeOrthant<CCDIM> current_orthant;
-  bool terminal;
+  Orthant<CCDIM> minimum_orthant;
+  Orthant<CCDIM> maximum_orthant;
+  Orthant<CCDIM> current_orthant;
+
+  // Set once the iterator repeats to mark the completion of one cycle.
+  bool wrapped = false;
 
 public:
   /** @brief Difference type between iterators. */
   using difference_type = std::ptrdiff_t;
-  /** @brief Value type when dereferenced. */
-  using value_type = const CubeOrthant<CCDIM>;
-  /** @brief Pointer type. */
-  using pointer = value_type*;
-  /** @brief Reference type. */
-  using reference = value_type&;
-  /** @brief Tag for `iterator_traits` */
+  /**
+   * @brief The iterator value type are `Orthant` objects. When objects of this
+   * class are dereferenced they return a `const` reference to this type.
+   */
+  using value_type = Orthant<CCDIM>;
+  /**
+   * @brief Reference type to `const` `value_type`; returned when objects of
+   * this class are dereferenced.
+   */
+  using reference = const value_type&;
+  /**
+   * @brief Pointer type to `const` `value_type`; returned by the `->` operator.
+   */
+  using pointer = const value_type*;
+  /** @brief Forward iterator tag for `iterator_traits` */
   using iterator_concept = std::forward_iterator_tag;
 
   /**
    * @brief Default initialize a new LexOrthantIterator object.
    *
-   * Unusable in this state but can be assigned to, as normal.
+   * This is a trivial (one element only) iterator at the origin of the
+   * hypercubical grid. However, it can be assigned to, as normal.
    */
   LexOrthantIterator() = default;
   /**
-   * @brief Construct a new LexOrthantIterator object by passing minimal and
-   * maximal orthants.
+   * @brief Construct a new LexOrthantIterator object iterating over the
+   * rectangle of orthants between the `minimum` and `maximum` `Orthant`
+   * objects, beginning at `current` and proceeding lexicographically.
    *
-   * The terminal flag can be passed as well; a value of `true` notes this as
-   * a past-the-end iterator.
-   *
-   * @param it
+   * @param minimum The least (in lexicographical ordering) orthant in the range
+   * iterated over by the newly-constructed object. Each axis must be less than
+   * or equal to that of `maximum`.
+   * @param maximum The greatest (in lexicographical ordering) orthant in the
+   * range iterated over by the newly-constructed object. Each axis must be
+   * greater than or equal to that of `minimum`.
+   * @param current The orthant at which iteration begins; expected to lie
+   * within the rectangle formed by `minimum` and `maximum`.
    */
-  explicit LexOrthantIterator(
-      CubeOrthant<CCDIM> minimum_orthant, CubeOrthant<CCDIM> maximum_orthant,
-      CubeOrthant<CCDIM> current_orthant, bool terminal = false
-  ) :
-      minimum_orthant(minimum_orthant), maximum_orthant(maximum_orthant),
-      current_orthant(current_orthant), terminal(terminal) {}
+  LexOrthantIterator(const Orthant<CCDIM>& minimum,
+      const Orthant<CCDIM>& maximum, const Orthant<CCDIM>& current) :
+      minimum_orthant(minimum),
+      maximum_orthant(maximum),
+      current_orthant(current) {}
+  /**
+   * @brief This constructor overload uses `minimum` as the beginning orthant,
+   * so that the newly-constructed object iterates over the entire rectangle
+   * between `minimum` and `maximum`.
+   */
+  LexOrthantIterator(const Orthant<CCDIM>& minimum,
+      const Orthant<CCDIM>& maximum) :
+      LexOrthantIterator(minimum, maximum, minimum) {}
 
   /**
-   * @brief Dereferencing this iterator yields a constant reference to
-   * the current orthant pointed to.
+   * @brief Dereference the iterator, yielding a constant reference to the
+   * currently pointed-to `Orthant` in the grid.
    *
-   * @return reference
+   * The pointed-to object is always valid, even if the iterator has cycled.
    */
-  [[nodiscard]] reference operator*() const {
+  [[nodiscard]] reference operator*() const noexcept {
     return current_orthant;
   }
-
   /**
-   * @brief Equality operates first on the `terminal` flag, then on the current
-   * orhant.
-
+   * @brief Access the pointed-to `Orthant` object via a pointer.
    *
-   * @param rhs
-   * @return true
-   * @return false
+   * The pointed-to object is always valid, even if the iterator has cycled.
    */
-  [[nodiscard]] bool operator==(const LexOrthantIterator& rhs) const {
-    if (terminal != rhs.terminal) {
-      return false;
-    }
-    if (terminal) {
-      return true;
-    }
-    return current_orthant == rhs.current_orthant;
+  [[nodiscard]] pointer operator->() const noexcept {
+    return &current_orthant;
   }
 
   /**
-   * @brief Preincrememnt moves the pointer to the next orthant in a
-   * lexicographical order.
+   * @brief Compare two LexOrthantIterator objects based on the range they
+   * iterate over (defined by minimum and maximum `Orthant` objects), the
+   * currently pointed-to `Orthant` object, and whether the iterator has cycled.
+   */
+  [[nodiscard]] bool operator==(const LexOrthantIterator&) const = default;
+
+  /**
+   * @brief Increment the iterator, pointing to the next orthant in the grid.
    *
-   * If it would move past the final orthant, sets the `terminal` flag instead.
-   *
-   * @return LexOrthantIterator&
+   * @return LexOrthantIterator& A reference to this object.
    */
   LexOrthantIterator& operator++() {
-    for (std::size_t axis = 0; axis < CCDIM; ++axis) {
+    for (std::size_t axis = 0; axis != CCDIM; ++axis) {
       if (current_orthant[axis] != maximum_orthant[axis]) {
         ++current_orthant[axis];
         return *this;
       }
       current_orthant[axis] = minimum_orthant[axis];
     }
-    terminal = true;
+    wrapped = true;
     return *this;
   }
   /**
-   * @brief Postincrement operates as normal.
+   * @brief Postincrement operates as expected.
+   *
+   * @return LexOrthantIterator A copy of this object prior to incrementing.
    */
   LexOrthantIterator operator++(int) {
     LexOrthantIterator temp = *this;
     ++*this;
     return temp;
+  }
+
+  /**
+   * @brief Determine if the iterator has reached the maximum orthant.
+   *
+   * This iterator will start from the minimum orthant after reaching the
+   * maximum; this operator returns `true` after this iterator has been
+   * incremented past the maximum orthant.
+   */
+  [[nodiscard]] explicit operator bool() const noexcept {
+    return !wrapped;
+  }
+};
+
+/**
+ * @brief A forward iterator class template over all cubical cells (as `Cube`
+ * objects) in a rectangle of orthants in the `CCDIM`-dimensional hypercubical
+ * grid.
+ *
+ * The order of iteration is first lexicographical in the orthants (as iterated
+ * by `LexOrthantIterator`) then lexicographical over the cubical cells in
+ * each orthant (under the identification with their dual orthants).
+ *
+ * This is the iterator class used by the `CubicalComplex` class template.
+ *
+ * @tparam CCDIM The ambient dimension of the hypercubical grid. This matches
+ * the `CCDIM` template parameter of the associated `Cube` class template.
+ */
+template <std::size_t CCDIM>
+class CubeIterator {
+private:
+  LexOrthantIterator<CCDIM> base_it;
+  Orthant<CCDIM> dual_orthant;
+  bool is_sentinel = false;
+
+  CubeIterator(bool) :
+      is_sentinel(true) {}
+
+public:
+  /** @brief Difference type between iterators. */
+  using difference_type = std::ptrdiff_t;
+  /**
+   * @brief The class type returned when iterators of this type are
+   * dereferenced.
+   */
+  using value_type = Cube<CCDIM>;
+  /**
+   * @brief The class type returned when iterators of this type are
+   * dereferenced. Identical to `value_type` as dereferencing returns by value.
+   */
+  using reference = value_type;
+  /** @brief Forward iterator tag for `iterator_traits`. */
+  using iterator_concept = std::forward_iterator_tag;
+
+  /**
+   * @brief Default initialize a trivial (but valid) iterator that can be
+   * assigned to, as normal.
+   */
+  CubeIterator() = default;
+  /**
+   * @brief Construct a new CubeIterator object by specifying the minimum and
+   * maximum orthants that will be iterated over (specifically, all cubical
+   * cells in them).
+   *
+   * @param minimum The least `Orthant` object iterated over. All cubical cells
+   * iterated over reside in orthants greater than or equal to `minimum` in all
+   * axes.
+   * @param maximum The greatest `Orthant` object iterated over. All cubical
+   * cells iterated over reside in orthants less than or equal to `minimum` in
+   * all axes.
+   */
+  CubeIterator(const Orthant<CCDIM>& minimum, const Orthant<CCDIM>& maximum) :
+      base_it(LexOrthantIterator<CCDIM>(minimum, maximum)),
+      dual_orthant(minimum) {}
+
+  /**
+   * @brief Construct and return a sentinel which evaluates equal only to other
+   * sentinels and `CubeIterator` objects which have completed iteration.
+   *
+   * @sa operator==
+   */
+  [[nodiscard]] static CubeIterator sentinel() noexcept {
+    return CubeIterator(true);
+  }
+
+  /**
+   * @brief Dereference the iterator, returning (by value) a `Cube` object with
+   * the currently pointed-to `Orthant` objects.
+   */
+  [[nodiscard]] value_type operator*() const {
+    return Cube<CCDIM>(*base_it, dual_orthant);
+  }
+
+  /**
+   * @brief Compare iterators by their minimum and maximum bounds as well as
+   * the currently pointed-to cubical cell.
+   *
+   * If this object or `rhs` is a sentinel (see the `sentinel` static member
+   * function), `true` is only returned if both are sentinels or the other is an
+   * iterator that has finished iteration.
+   *
+   * @param rhs The `CubeIterator` instance to compare this object against.
+   */
+  [[nodiscard]] bool operator==(const CubeIterator& rhs) const {
+    if (!is_sentinel && !rhs.is_sentinel) {
+      return dual_orthant == rhs.dual_orthant && base_it == rhs.base_it;
+    }
+    if ((is_sentinel || !base_it) && (rhs.is_sentinel || !rhs.base_it)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * @brief Increment the iterator to the next cubical cell lexicographically.
+   *
+   * If the iterator has iterated over all cells in the current orthant, it
+   * points to the next orthant (lexicographically) and begins iterating over
+   * cells (again, lexicographically) residing in that orthant.
+   *
+   * @return CubeIterator& A reference to this object.
+   */
+  CubeIterator& operator++() {
+    for (std::size_t axis = 0; axis != CCDIM; ++axis) {
+      if (dual_orthant[axis] == (*base_it)[axis]) {
+        --dual_orthant[axis];
+        return *this;
+      }
+      dual_orthant[axis] = (*base_it)[axis];
+    }
+    ++base_it;
+    dual_orthant = *base_it;
+    return *this;
+  }
+  /**
+   * @brief Postincrement operator functions as expected, incrementing this
+   * object but returning a copy that is not incremented.
+   *
+   * This involves copying several objects and may not be efficient in expensive
+   * operations.
+   *
+   * @return CubeIterator A copy of this object, prior to this object being
+   * incremented.
+   */
+  CubeIterator operator++(int) {
+    CubeIterator temp = *this;
+    ++*this;
+    return temp;
+  }
+
+  /**
+   * @brief Determine if the iterator has iterated over all cubical cells in
+   * the rectangle.
+   *
+   * This iterator will start from the minimum orthant after reaching the
+   * maximum; this operator returns `true` after this iterator has been
+   * incremented past the maximum orthant (along with all its cells).
+   */
+  [[nodiscard]] explicit operator bool() const noexcept {
+    return static_cast<bool>(base_it);
+  }
+};
+
+/**
+ * @brief A function object modeling `BoundedGrading` based on a queried cubical
+ * cell residing in the closure of top-dimensional (i.e. dimension `CCDIM`).
+ * cubes.
+ *
+ * @tparam CCDIM The ambient dimension of the hypercubical grid. This matches
+ * the `CCDIM` template parameter of the associated `Cube` and `Orthant` class
+ * templates.
+ * @tparam MIN Minimal grading value, i.e. the value returned if the queried
+ * cubical cell is in the closure of an included top-dimensional cell.
+ * @tparam MAX Maximal grading value, i.e. the value returned if the queried
+ * cubical cell is NOT in the closure of an included top-dimensional cell.
+ * @tparam SetType The underlying set-like data structure. Expected to be either
+ * `std::set` or `std::unordered_set` but any set-like container with
+ * sufficiently similar interface can work. The default type is
+ * `std::unordered_set` as the stored `Orthant<CCDIM>` type is hashable.
+ */
+template <std::size_t CCDIM, GradingResultType MIN = 0,
+    GradingResultType MAX = 1,
+    template <typename...> typename SetType = DefaultSet>
+class TopCubeSetGrading {
+public:
+  /** @brief Input cubical cell type to the grading function. */
+  using InputType = Cube<CCDIM>;
+  /** @brief The stored `Orthant` type. `Orthant` objects of this type can also
+   * be queried, equivalent to querying the top-dimensional cubical cell
+   * residing in that orthant.
+   */
+  using OrthantType = Orthant<CCDIM>;
+  /** @brief Minimal grading value. */
+  using Minimum = std::integral_constant<GradingResultType, MIN>;
+  /** @brief Maximal grading value. */
+  using Maximum = std::integral_constant<GradingResultType, MAX>;
+
+private:
+  SetType<OrthantType> top_cube_set;
+
+public:
+  /**
+   * @brief Initialize an empty TopCubeSetGrading function object. In other
+   * words, all queries will return the value of the `MAX` template parameter.
+   */
+  TopCubeSetGrading() = default;
+  /**
+   * @brief Initialize a TopCubeSetGrading function object by supplying a set of
+   * the `Orthant` objects corresponding to top-dimensional cubes with minimal
+   * grade.
+   *
+   * @param top_cubes A set-like (`std::initializer_list`, or the class template
+   * parameter `SetType`) collection of `Orthant` objects.
+   */
+  TopCubeSetGrading(const SetType<OrthantType>& top_cubes) :
+      top_cube_set(top_cubes) {}
+  /** @overload */
+  TopCubeSetGrading(SetType<OrthantType>&& top_cubes) :
+      top_cube_set(std::move(top_cubes)) {}
+  /** @overload */
+  TopCubeSetGrading(std::initializer_list<OrthantType> top_cubes) :
+      top_cube_set(top_cubes) {}
+
+  /**
+   * @brief Query the grade of `orthant`, i.e. the minimal value (`MIN`) if
+   * `orthant` corresponds to a stored top-dimensional cube or the maximal value
+   * (`MAX`) otherwise.
+   *
+   * This specialization is used by the cubical Morse-reduction-based homology
+   * algorithm to efficiently query the grades of cubical cells in each orthant.
+   */
+  GradingResultType operator()(const OrthantType& orthant) const noexcept {
+    return top_cube_set.contains(orthant) ? MIN : MAX;
+  }
+
+  /**
+   * @brief Query the grade of a cubical cell by determining if it is in the
+   * closure of a top-dimensional cube of minimal grade.
+   *
+   * This requires querying inclusion in the underlying set a number of times
+   * linear in the `CCDIM` template parameter for each cube, and can thus be
+   * costly if done commonly or inefficiently.
+   */
+  GradingResultType operator()(const InputType& cube) const noexcept {
+    for (BFSDualOrthantIterator<CCDIM> bfs_it(cube.dual(), cube.base()); bfs_it;
+         ++bfs_it) {
+      if (top_cube_set.contains(bfs_it->first)) {
+        return MIN;
+      }
+    }
+    return MAX;
   }
 };
 
@@ -395,24 +1144,25 @@ public:
  * @brief Class implementing a cubical complex embedded in a `CCDIM`-dimensional
  * hypercubical grid.
  *
- * The corresponding cell class is `Cube`.
+ * The corresponding cell class is `Cube<CCDIM>`.
  *
- * The cubical complex includes all orthants in the hypercubical grid between
- * some minimum orthant (default the origin) and some user-provided maximum
- * orthant.
+ * The cubical complex includes all orthants (and cubical cells residing within
+ * them) in the hypercubical grid between some minimum orthant (by default the
+ * origin) and a specified maximum orthant.
  *
  * @tparam CCDIM Ambient dimension of the cubical complex i.e. the maximum
- * dimension of `Cube` instances as cells and the number of axes. Notably, this
- * must be fewer than the bitwidth of `std::size_t`.
+ * dimension of `Cube` instances as cubical cells and the number of axes. This
+ * matches the `CCDIM` template parameter on the associated `Cube` and `Orthant`
+ * class template specializations. Notably, this must also be less than the
+ * bit-width of `std::size_t`.
  * @tparam G The type of grading function object, which must model `Grading`.
  * @tparam R The coefficient ring type, which must model `Ring`. Default value
  * is `Z<2>`, i.e. the ring (field) with two elements.
  * @tparam M The chain type, which must model `Module`. The basis type must be
  * `Cube<CCDIM>` and the coefficient ring type must be `R`. The default type is
- * set to `DefaultModule` on these types.
+ * set to `DefaultModule` specialized on `R` and `Cube<CCDIM>`.
  */
-template <
-    std::size_t CCDIM, Grading G, Ring R = Z<2>,
+template <std::size_t CCDIM, Grading G, Ring R = Z<2>,
     Module M = DefaultModule<Cube<CCDIM>, R>>
 requires requires {
   requires CCDIM <= SIZE_T_BITS;
@@ -422,8 +1172,8 @@ requires requires {
 }
 class CubicalComplex {
 private:
-  CubeOrthant<CCDIM> minimum_orthant;
-  CubeOrthant<CCDIM> maximum_orthant;
+  Orthant<CCDIM> minimum_orthant;
+  Orthant<CCDIM> maximum_orthant;
   G grading_function;
 
 public:
@@ -436,97 +1186,77 @@ public:
   /** @brief Grading function object type. */
   using GradingType = G;
   /** @brief Iterator type over cells. */
-  using CellIterType = BasicCubeIterator<CCDIM, LexOrthantIterator<CCDIM>>;
+  using CellIterType = CubeIterator<CCDIM>;
   /** @brief Ambient dimension in which the complex is embedded. */
   static constexpr std::size_t dimension = CCDIM;
 
   /**
    * @brief Initialize a new cubical complex with a maximum orthant and the
    * origin as minimum orthant. Also requires a grading function.
-   *
-   * @param maximum_orthant
-   * @param grading_function
    */
-  CubicalComplex(
-      const CubeOrthant<CCDIM>& maximum_orthant,
-      const GradingType& grading_function
-  ) :
-      minimum_orthant(), maximum_orthant(maximum_orthant),
+  CubicalComplex(const Orthant<CCDIM>& maximum_orthant,
+      const GradingType& grading_function) :
+      minimum_orthant(),
+      maximum_orthant(maximum_orthant),
       grading_function(grading_function) {}
-  /** @copydoc CubicalComplex(const CubeOrthant<CCDIM>&, const GradingType&) */
-  CubicalComplex(
-      const CubeOrthant<CCDIM>& maximum_orthant, GradingType&& grading_function
-  ) :
-      minimum_orthant(), maximum_orthant(maximum_orthant),
+  /** @overload */
+  CubicalComplex(const Orthant<CCDIM>& maximum_orthant,
+      GradingType&& grading_function) :
+      minimum_orthant(),
+      maximum_orthant(maximum_orthant),
       grading_function(std::move(grading_function)) {}
   /**
    * @brief Initialize a new cubical complex with both a maximum and minimum
    * orthant. Also requires a grading function.
-   *
-   * @param minimum_orthant
-   * @param maximum_orthant
-   * @param grading_function
    */
-  CubicalComplex(
-      const CubeOrthant<CCDIM>& minimum_orthant,
-      const CubeOrthant<CCDIM>& maximum_orthant,
-      const GradingType& grading_function
-  ) :
-      minimum_orthant(minimum_orthant), maximum_orthant(maximum_orthant),
+  CubicalComplex(const Orthant<CCDIM>& minimum_orthant,
+      const Orthant<CCDIM>& maximum_orthant,
+      const GradingType& grading_function) :
+      minimum_orthant(minimum_orthant),
+      maximum_orthant(maximum_orthant),
       grading_function(grading_function) {}
-  /**
-   * @copydoc CubicalComplex(const CubeOrthant<CCDIM>&,
-   * const CubeOrthant<CCDIM>&, const GradingType&)
-   */
-  CubicalComplex(
-      const CubeOrthant<CCDIM>& minimum_orthant,
-      const CubeOrthant<CCDIM>& maximum_orthant, GradingType&& grading_function
-  ) :
-      minimum_orthant(minimum_orthant), maximum_orthant(maximum_orthant),
+  /** @overload */
+  CubicalComplex(const Orthant<CCDIM>& minimum_orthant,
+      const Orthant<CCDIM>& maximum_orthant, GradingType&& grading_function) :
+      minimum_orthant(minimum_orthant),
+      maximum_orthant(maximum_orthant),
       grading_function(std::move(grading_function)) {}
 
   /**
-   * @brief Get the minimum orthant in the complex.
-   *
-   * @return const CubeOrthant<CCDIM>&
+   * @brief Return (a `const` reference to) the minimum orthant in the complex.
    */
-  [[nodiscard]] const CubeOrthant<CCDIM>& minimum() const noexcept {
+  [[nodiscard]] const Orthant<CCDIM>& minimum() const noexcept {
     return minimum_orthant;
   }
   /**
-   * @brief Get the minimum coordinate in the complex along a particular axis.
-   *
-   * @param axis
-   * @return HypercubeCoordinate
+   * @brief Return the minimum coordinate in the complex along a particular
+   * axis.
    */
   [[nodiscard]] HypercubeCoordinate minimum(std::size_t axis) const {
-    return minimum_orthant.at(axis);
+    return minimum_orthant[axis];
   }
   /**
-   * @brief Get the maximum orthant in the complex.
-   *
-   * @return const CubeOrthant<CCDIM>&
+   * @brief Return (a `const` reference to) the maximum orthant in the complex.
    */
-  [[nodiscard]] const CubeOrthant<CCDIM>& maximum() const noexcept {
+  [[nodiscard]] const Orthant<CCDIM>& maximum() const noexcept {
     return maximum_orthant;
   }
   /**
-   * @brief Get the maximum coordinate in the complex along a particular axis.
-   *
-   * @param axis
-   * @return HypercubeCoordinate
+   * @brief Return the maximum coordinate in the complex along a particular
+   * axis.
    */
   [[nodiscard]] HypercubeCoordinate maximum(std::size_t axis) const {
-    return maximum_orthant.at(axis);
+    return maximum_orthant[axis];
   }
 
   /**
-   * @brief Grade `input` according to the complex's grading function.
+   * @brief Query the grading function with an object `t` of type `T`. This
+   * function only participates in overload resolution if the grading function
+   * can query type `T`.
    *
-   * @tparam T The type of the input. At minimum, this includes the complex's
-   * cell type.
-   * @param input
-   * @return GradingResultType
+   * The grading function need only take `Cube<CCDIM>` objects as input, but may
+   * grade more types (notably, `Orthant<CCDIM>` objects). This function
+   * provides a uniform interface to the grading function object.
    */
   template <typename T>
   requires requires(T t) {
@@ -537,76 +1267,69 @@ public:
   }
 
   /**
-   * @brief Beginning iterator for lexicographical iteration over cells. Allows
-   * use of complex in range-based for loops.
+   * @brief Return a forward iterator to the beginning of all cells comprised
+   * by this `CubicalComplex` object.
    *
-   * Due to the very high number of cells in a complex of higher ambient
-   * dimension, it may be inadvisable to iterate over all cells separately using
-   * this method.
+   * These cells are not explicitly stored and are computed by the iterators.
+   * Furthermore, `CubicalComplex` objects may comprise a huge number of cubical
+   * cells, over which iteration may not be feasible.
    *
-   * @return CellIterType
+   * Enables the use of range-based for loops for objects of this type.
    */
-  [[nodiscard]] CellIterType begin() const noexcept {
-    return CellIterType(
-        LexOrthantIterator(minimum_orthant, maximum_orthant, minimum_orthant)
-    );
+  [[nodiscard]] CellIterType begin() const {
+    return CubeIterator<CCDIM>(minimum_orthant, maximum_orthant);
   }
 
   /**
-   * @brief End sentinel for lexicographical iteration over cells.
+   * @brief Return a forward iterator past the end of all cells comprised by
+   * this `CubicalComplex` object.
    *
-   * @return CellIterType
+   * Compare against the iterator returned by `begin` to demarcate the end of
+   * iteration.
+   *
+   * Enables the use of range-based for loops for objects of this type.
    */
-  [[nodiscard]] CellIterType end() const noexcept {
-    return CellIterType(LexOrthantIterator(
-        minimum_orthant, maximum_orthant, minimum_orthant, true
-    ));
+  [[nodiscard]] CellIterType end() const {
+    return CubeIterator<CCDIM>::sentinel();
   }
 
   /**
-   * @brief Get the boundary of `cell` in the complex subject to some constraint
-   * `cond`.
+   * @brief Return the boundary of `cell` in the complex subject to some
+   * constraint `cond`.
    *
    * This method synthesizes the `boundary`, `graded_boundary`, and
    * `closure_boundary` function templates for this class along with the
    * generalizations to chain inputs.
    *
-   * @param cell
-   * @param cond A function taking (a constant reference to) a potential
+   * @param cell The cubical cell to take the boundary of.
+   * @param cond A function taking (a `const` reference to) a potential
    * boundary cell and returning a boolean value; if `true`, the cell is added
-   * to the boundary.
-   * @return ChainType
+   * to the boundary and discarded otherwise.
+   * @return ChainType The boundary of `cell` subject to `cond`.
    */
-  [[nodiscard]] ChainType
-  boundary_if(const CellType& cell, const ConditionalType<CellType>& cond) {
+  [[nodiscard]] ChainType boundary_if(const CellType& cell,
+      const ConditionalType<CellType>& cond) {
     // Implementation follows `Computational Homology` Kaczynski et al.
-
-    const CubeOrthant<CCDIM>& cube_orthant = cell.orthant();
-    const std::size_t cube_extent = cell.extent();
-    std::size_t axis_bit = 1;
     RingType coef = one<RingType>();  // axes with extent negate the coefficient
     ChainType result;
 
-    for (std::size_t axis = 0; axis < CCDIM; ++axis, axis_bit <<= 1) {
+    for (std::size_t axis = 0; axis < CCDIM; ++axis) {
       // cell must have extent along this axis to have a boundary
-      if (cube_extent & axis_bit) {
-        // The extent is the same for inner and outer cell
-        std::size_t new_extent = cube_extent - axis_bit;
-
+      if (cell.base(axis) == cell.dual(axis)) {
         // No outer cells along maximum edge of complex
-        if (cube_orthant[axis] != maximum_orthant[axis]) {
-          CubeOrthant<CCDIM> new_orthant = cube_orthant;
-          new_orthant[axis] += 1;
-          Cube<CCDIM> outer_cell(std::move(new_orthant), new_extent);
+        if (cell.base(axis) != maximum_orthant[axis]) {
+          Cube<CCDIM> outer_cell(cell);
+          ++outer_cell.base(axis);
           if (cond(outer_cell)) {
-            result.insert(outer_cell, coef);
+            result.insert(std::move(outer_cell), coef);
           }
         }
 
         // Always inner cells
-        Cube<CCDIM> inner_cell(cube_orthant, new_extent);
+        Cube<CCDIM> inner_cell(cell);
+        --inner_cell.dual(axis);
         if (cond(inner_cell)) {
-          result.insert(inner_cell, -coef);
+          result.insert(std::move(inner_cell), -coef);
         }
 
         // Negate coefficient on axes with extent
@@ -617,46 +1340,40 @@ public:
   }
 
   /**
-   * @brief Get the coboundary of `cell` in the complex subject to some
+   * @brief Return the coboundary of `cell` in the complex subject to some
    * constraint `cond`.
    *
    * This method synthesizes the `coboundary`, `graded_coboundary`, and
    * `closure_coboundary` function templates for this class.
    *
-   * @param cell
+   * @param cell The cubical cell to take the coboundary of.
    * @param cond A function taking (a constant reference to) a potential
    * coboundary cell and returning a boolean value; if `true`, the cell is added
    * to the coboundary.
-   * @return ChainType
+   * @return ChainType The coboundary of `cell` subject to `cond`.
    */
-  [[nodiscard]] ChainType
-  coboundary_if(const CellType& cell, const ConditionalType<CellType>& cond) {
-    const CubeOrthant<CCDIM>& cube_orthant = cell.orthant();
-    const std::size_t cube_extent = cell.extent();
-    std::size_t axis_bit = 1;
+  [[nodiscard]] ChainType coboundary_if(const CellType& cell,
+      const ConditionalType<CellType>& cond) {
     RingType coef = one<RingType>();
     ChainType result;
 
-    for (std::size_t axis = 0; axis < CCDIM; ++axis, axis_bit <<= 1) {
+    for (std::size_t axis = 0; axis < CCDIM; ++axis) {
       // cell must not have extent along this axis to have a boundary
-      if (!(cube_extent & axis_bit)) {
-        // The extent is the same for inner and outer cell
-        std::size_t new_extent = cube_extent + axis_bit;
-
+      if (cell.base(axis) != cell.dual(axis)) {
         // No inner cells along minimum edge of complex
-        if (cube_orthant[axis] != minimum_orthant[axis]) {
-          CubeOrthant<CCDIM> new_orthant = cube_orthant;
-          new_orthant[axis] -= 1;
-          Cube<CCDIM> inner_cell(std::move(new_orthant), new_extent);
+        if (cell.base(axis) != minimum_orthant[axis]) {
+          Cube<CCDIM> inner_cell(cell);
+          --inner_cell.base(axis);
           if (cond(inner_cell)) {
-            result.insert(inner_cell, coef);
+            result.insert(std::move(inner_cell), coef);
           }
         }
 
         // Always outer cells
-        Cube<CCDIM> outer_cell(cube_orthant, new_extent);
+        Cube<CCDIM> outer_cell(cell);
+        ++outer_cell.dual(axis);
         if (cond(outer_cell)) {
-          result.insert(outer_cell, -coef);
+          result.insert(std::move(outer_cell), -coef);
         }
 
       } else {
@@ -665,112 +1382,6 @@ public:
       }
     }
     return result;
-  }
-};
-
-/**
- * @brief A function object modeling `BoundedGrading` based on the cell being in
- * the closure of top dimensional (i.e. dimesnion `CCDIM`) cubes.
- *
- * @tparam CCDIM Dimension of the ambient hypercubical complex.
- * @tparam MIN Minimal value, i.e. the value returned if the queried cell is in
- * the closure of an included top-dimensional cell.
- * @tparam MAX Maximal value, i.e. the value returned if the queried cell is NOT
- * in the closure of an included top-dimensional cell.
- * @tparam SetType The underlying set data structure. Expected to be either
- * `std::set` or `std::unordered_set` but any set-like container with
- * sufficiently similar interface can work. The default type is
- * `std::unordered_set` as the stored `CubeOrthant<CCDIM>` type is hashable.
- */
-template <
-    std::size_t CCDIM, GradingResultType MIN = 0, GradingResultType MAX = 1,
-    template <typename...> typename SetType = DefaultSet>
-class TopCubeSetGrading {
-public:
-  /** @brief Input cell type to the grading function. */
-  using InputType = Cube<CCDIM>;
-  /** @brief Orthant type. */
-  using OrthantType = CubeOrthant<CCDIM>;
-  /** @brief Value type of the underlying orthant set. */
-  using ValueType = typename SetType<OrthantType>::value_type;
-  /** @brief Minimal grading value. */
-  using Minimum = std::integral_constant<GradingResultType, MIN>;
-  /** @brief Maximal grading value. */
-  using Maximum = std::integral_constant<GradingResultType, MAX>;
-
-private:
-  SetType<OrthantType> top_cube_set;
-
-public:
-  /**
-   * @brief Initialize a TopCubeSetGrading function object by supplying a set of
-   * the (orthants of) top-dimensional cubes with minimal grade.
-   *
-   * @param top_cubes
-   */
-  TopCubeSetGrading(const SetType<OrthantType>& top_cubes) :
-      top_cube_set(top_cubes) {}
-  /** @overload */
-  TopCubeSetGrading(SetType<OrthantType>&& top_cubes) :
-      top_cube_set(top_cubes) {}
-  /** @overload */
-  TopCubeSetGrading(const std::initializer_list<ValueType>& top_cubes) :
-      top_cube_set(top_cubes) {}
-  /** @overload */
-  TopCubeSetGrading(std::initializer_list<ValueType>&& top_cubes) :
-      top_cube_set(top_cubes) {}
-
-  /**
-   * @brief Query the grade of `orthant`, i.e. the minimal value (`MIN`) if
-   * `orthant` corresponds to a stored top-dimensional cube or the maximal value
-   * (`MAX`) otherwise.
-   *
-   * @param orthant
-   * @return GradingResultType
-   */
-  GradingResultType operator()(const OrthantType& orthant) const noexcept {
-    return top_cube_set.contains(orthant) ? MIN : MAX;
-  }
-
-  /**
-   * @brief Query the grade of a cell (cube) by determining if it is in the
-   * closure of a top-dimensional cell of minimal grade.
-   *
-   * @param cube
-   * @return GradingResultType
-   */
-  GradingResultType operator()(const InputType& cube) const noexcept {
-    // Used for iterating in surrounding orthants.
-    std::array<bool, CCDIM> minimal{};
-
-    CubeOrthant<CCDIM> current_orthant = cube.orthant();
-    while (true) {
-      if (top_cube_set.contains(current_orthant)) {
-        return MIN;
-      }
-
-      // Iterate to next orthant.
-      bool broken = false;
-      std::size_t axis = 0;
-      std::size_t axis_flag = 1;
-      for (; axis < CCDIM; ++axis, axis_flag <<= 1) {
-        if (cube.extent() & axis_flag) {
-          continue;
-        }
-        if (!minimal[axis]) {
-          minimal[axis] = true;
-          --(current_orthant[axis]);
-          broken = true;
-          break;
-        }
-        minimal[axis] = false;
-        ++(current_orthant[axis]);
-      }
-
-      if (!broken) {
-        return MAX;
-      }
-    }
   }
 };
 

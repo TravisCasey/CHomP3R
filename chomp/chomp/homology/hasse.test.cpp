@@ -26,20 +26,17 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
   // and 2D cubical complex.
   const SetGrading<Cube<2>, 0, 1> grading_func(
       {Cube<2>({0, 0}, 0b00), Cube<2>({0, 0}, 0b01), Cube<2>({0, 0}, 0b10),
-       Cube<2>({1, 0}, 0b00), Cube<2>({1, 0}, 0b10), Cube<2>({0, 1}, 0b00),
-       Cube<2>({0, 1}, 0b01), Cube<2>({1, 1}, 0b00)}
-  );
-  const std::shared_ptr<CubicalComplex<2, decltype(grading_func), int>>
-      complex =
-          std::make_shared<CubicalComplex<2, decltype(grading_func), int>>(
-              CubeOrthant<2>({1, 1}), grading_func
-          );
+          Cube<2>({1, 0}, 0b00), Cube<2>({1, 0}, 0b10), Cube<2>({0, 1}, 0b00),
+          Cube<2>({0, 1}, 0b01), Cube<2>({1, 1}, 0b00)});
+  const std::shared_ptr<CubicalComplex<2, decltype(grading_func), int>> complex
+      = std::make_shared<CubicalComplex<2, decltype(grading_func), int>>(
+          Orthant<2>{1, 1}, grading_func);
   using CellType = decltype(complex)::element_type::CellType;
   using ChainType = decltype(complex)::element_type::ChainType;
 
   // Declare hasse diagram coreduction handler but do not match yet.
-  HasseCoreduction<
-      CubicalComplex<2, decltype(grading_func), int>, std::unordered_map>
+  HasseCoreduction<CubicalComplex<2, decltype(grading_func), int>,
+      std::unordered_map>
       hasse(complex);
 
   // Check the leaves after construction are correct. In other words, these are
@@ -47,9 +44,8 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
   std::set<CellType> leaf_cells;
   std::set<CellType> correct(
       {Cube<2>({0, 0}, 0), Cube<2>({1, 0}, 0), Cube<2>({0, 1}, 0),
-       Cube<2>({1, 1}, 0), Cube<2>({0, 0}, 3), Cube<2>({1, 0}, 1),
-       Cube<2>({0, 1}, 2), Cube<2>({1, 1}, 1), Cube<2>({1, 1}, 2)}
-  );
+          Cube<2>({1, 1}, 0), Cube<2>({0, 0}, 3), Cube<2>({1, 0}, 1),
+          Cube<2>({0, 1}, 2), Cube<2>({1, 1}, 1), Cube<2>({1, 1}, 2)});
   for (const auto& node : hasse.get_diagram()) {
     leaf_cells.insert(node->cell);
   }
@@ -118,8 +114,8 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
     // (notation: match(queen_i) = king_i); assume queen_1 != queen_2
     // queen_2 in boundary of king_1 -> priority(queen_2) < priority(queen_1)
     if (match_pair.second.is_queen()) {
-      const ChainType neighbors =
-          graded_boundary(*complex, match_pair.second.cell());
+      const ChainType neighbors
+          = graded_boundary(*complex, match_pair.second.cell());
       for (const CellType& cell : neighbors) {
         if (cell == match_pair.first) {
           continue;
@@ -135,8 +131,8 @@ TEST_CASE("Hasse diagram coreductions on cubical complexes", "[homology]") {
       // (notation: match(king_i) = queen_i); assume king_1 != king_2
       // king_2 in coboundary of king_1 -> priority(king_2) > priority(king_1)
     } else {
-      const ChainType neighbors =
-          graded_coboundary(*complex, match_pair.second.cell());
+      const ChainType neighbors
+          = graded_coboundary(*complex, match_pair.second.cell());
       for (const CellType& cell : neighbors) {
         if (cell == match_pair.first) {
           continue;
