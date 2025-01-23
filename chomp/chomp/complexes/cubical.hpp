@@ -22,7 +22,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <compare>
 #include <concepts>
 #include <cstddef>
@@ -461,7 +460,7 @@ namespace std {
 template <size_t CCDIM>
 struct hash<chomp::core::Orthant<CCDIM>> {
 private:
-  constexpr static size_t PRIME = 31;
+  constexpr static size_t PRIME = 71;
   constexpr static size_t INITIAL = 15605072507422122298ULL;
 
 public:
@@ -482,16 +481,16 @@ struct hash<chomp::core::Cube<CCDIM>> {
 private:
   // Inspiration/Credit: Wolfgang Brehm, StackOverflow.
 
-  static constexpr size_t alt = 0x5555555555555555ULL;
-  static constexpr size_t ran = 17316035218449499591ULL;
-  static constexpr size_t dig = numeric_limits<size_t>::digits;
+  static constexpr size_t ALT = 0x5555555555555555ULL;
+  static constexpr size_t RAN = 17316035218449499591ULL;
+  static constexpr size_t DIG = numeric_limits<size_t>::digits;
 
   [[nodiscard]] static size_t xorshift(size_t n, size_t shift) noexcept {
     return n ^ (n >> shift);
   }
 
   [[nodiscard]] static size_t distribute(size_t n) noexcept {
-    return ran * xorshift(alt * xorshift(n, dig / 2), dig / 2);
+    return RAN * xorshift(ALT * xorshift(n, DIG / 2), DIG / 2);
   }
 
 public:
@@ -499,7 +498,7 @@ public:
   [[nodiscard]] size_t operator()(
       const chomp::core::Cube<CCDIM>& cube) const noexcept {
     hash<chomp::core::Orthant<CCDIM>> hasher;
-    return rotl(hasher(cube.base()), dig / 3) ^ distribute(hasher(cube.dual()));
+    return hasher(cube.base()) << (DIG / 3) ^ distribute(hasher(cube.dual()));
   }
 };
 
