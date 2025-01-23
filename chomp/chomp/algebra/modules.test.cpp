@@ -125,10 +125,20 @@ TEMPLATE_LIST_TEST_CASE(
   REQUIRE((*it == cell_0 || *it == cell_1));
   it++;
   REQUIRE((it == elem.end() || *it == cell_0 || *it == cell_1));
-}
 
-// Clang-tidy false positive with LinearMap concept
-#  ifndef CHOMP_CLANG_TIDY
+  elem.erase(cell_0);
+  elem.erase(cell_1);
+
+  REQUIRE(elem[cell_0] == zero<R>());
+  REQUIRE(elem[cell_1] == zero<R>());
+
+  elem.insert(cell_0, one<R>());
+  elem.insert(cell_1, one<R>());
+  elem.clear();
+
+  REQUIRE(elem[cell_0] == zero<R>());
+  REQUIRE(elem[cell_1] == zero<R>());
+}
 
 TEMPLATE_LIST_TEST_CASE(
     "Linear function interface to modules", "[algebra]", ModuleTypes
@@ -169,8 +179,6 @@ TEMPLATE_LIST_TEST_CASE(
   REQUIRE(elem_1[cell_0] == -one<R>() - one<R>());
   REQUIRE(elem_1[cell_1] == zero<R>());
 }
-
-#  endif  // CHOMP_CLANG_TIDY
 
 TEMPLATE_LIST_TEST_CASE(
     "Comparison operators on modules", "[algebra]", ModuleTypes

@@ -158,8 +158,7 @@ template <Ring R>
 [[nodiscard]] R invert(const R& value) {
   if (value == zero<R>()) {
     throw std::domain_error(
-        "Attempted to invert a ring element that is not a unit."
-    );
+        "Attempted to invert a ring element that is not a unit.");
   }
   return one<R>() / value;
 }
@@ -171,8 +170,7 @@ requires Ring<R> && std::unsigned_integral<R>
     return one<R>();
   }
   throw std::domain_error(
-      "Attempted to invert a ring element that is not a unit."
-  );
+      "Attempted to invert a ring element that is not a unit.");
 }
 /** @overload */
 template <typename R>
@@ -185,8 +183,7 @@ requires Ring<R> && std::signed_integral<R>
     return -one<R>();
   }
   throw std::domain_error(
-      "Attempted to invert a ring element that is not a unit."
-  );
+      "Attempted to invert a ring element that is not a unit.");
 }
 
 /**
@@ -243,8 +240,8 @@ concept Basis = AssociativeKey<T>;
  * @sa Module
  */
 template <typename I, typename T>
-concept ModuleIterator =
-    std::forward_iterator<I> && std::convertible_to<std::iter_value_t<I>, T>;
+concept ModuleIterator
+    = std::forward_iterator<I> && std::convertible_to<std::iter_value_t<I>, T>;
 
 /**
  * @brief Most non-arithmetic requirements for a class `M` to model a module.
@@ -277,13 +274,12 @@ concept ModulePrecursor = requires(M mod) {
   {
     mod[std::declval<typename M::BasisType>()]
   } -> std::convertible_to<typename M::RingType>;
-  mod.insert(
-      std::declval<typename M::BasisType>(),
-      std::declval<typename M::RingType>()
-  );
+  mod.insert(std::declval<typename M::BasisType>(),
+      std::declval<typename M::RingType>());
   { mod.begin() } -> std::convertible_to<typename M::BasisIterType>;
   { mod.end() } -> std::convertible_to<typename M::BasisIterType>;
   mod.clear();
+  mod.erase(std::declval<typename M::BasisType>());
 };
 
 /**
@@ -379,8 +375,8 @@ requires ModulePrecursor<std::remove_cvref_t<Left>>
  * @return New module element that is the sum of `lhs` and `rhs`.
  */
 template <typename Left, typename Right>
-requires ModulePrecursor<std::remove_cvref_t<Left>> &&
-         std::same_as<std::remove_cvref_t<Left>, std::remove_cvref_t<Right>>
+requires ModulePrecursor<std::remove_cvref_t<Left>>
+         && std::same_as<std::remove_cvref_t<Left>, std::remove_cvref_t<Right>>
 [[nodiscard]] std::remove_cvref_t<Left> operator+(Left&& lhs, Right&& rhs) {
   std::remove_cvref_t<Left> result(std::forward<Left>(lhs));
   result += std::forward<Right>(rhs);
@@ -400,8 +396,8 @@ requires ModulePrecursor<std::remove_cvref_t<Left>> &&
  * @return New module element that is the difference of `lhs` and `rhs`.
  */
 template <typename Left, typename Right>
-requires ModulePrecursor<std::remove_cvref_t<Left>> &&
-         std::same_as<std::remove_cvref_t<Left>, std::remove_cvref_t<Right>>
+requires ModulePrecursor<std::remove_cvref_t<Left>>
+         && std::same_as<std::remove_cvref_t<Left>, std::remove_cvref_t<Right>>
 [[nodiscard]] std::remove_cvref_t<Left> operator-(Left&& lhs, Right&& rhs) {
   std::remove_cvref_t<Left> result(std::forward<Left>(lhs));
   result -= std::forward<Right>(rhs);
@@ -420,9 +416,9 @@ requires ModulePrecursor<std::remove_cvref_t<Left>> &&
  * @return New module element that is the product of `elem` with `coef`.
  */
 template <typename M, typename R>
-requires ModulePrecursor<std::remove_cvref_t<M>> &&
-         std::same_as<
-             std::remove_cvref_t<R>, typename std::remove_cvref_t<M>::RingType>
+requires ModulePrecursor<std::remove_cvref_t<M>>
+         && std::same_as<std::remove_cvref_t<R>,
+             typename std::remove_cvref_t<M>::RingType>
 [[nodiscard]] std::remove_cvref_t<M> operator*(M&& elem, R&& coef) {
   std::remove_cvref_t<M> result(std::forward<M>(elem));
   result *= coef;
@@ -441,9 +437,9 @@ requires ModulePrecursor<std::remove_cvref_t<M>> &&
  * @return New module element that is the product of `elem` with `coef`.
  */
 template <typename R, typename M>
-requires ModulePrecursor<std::remove_cvref_t<M>> &&
-         std::same_as<
-             std::remove_cvref_t<R>, typename std::remove_cvref_t<M>::RingType>
+requires ModulePrecursor<std::remove_cvref_t<M>>
+         && std::same_as<std::remove_cvref_t<R>,
+             typename std::remove_cvref_t<M>::RingType>
 [[nodiscard]] std::remove_cvref_t<M> operator*(R&& coef, M&& elem) {
   std::remove_cvref_t<M> result(std::forward<M>(elem));
   result *= coef;

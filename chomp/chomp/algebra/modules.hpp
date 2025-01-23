@@ -102,15 +102,15 @@ public:
    * @param coef Coefficient.
    */
   template <typename TFor, typename RFor>
-  requires std::same_as<std::remove_cvref_t<TFor>, T> &&
-           std::same_as<std::remove_cvref_t<RFor>, R>
+  requires std::same_as<std::remove_cvref_t<TFor>, T>
+           && std::same_as<std::remove_cvref_t<RFor>, R>
   void insert(TFor&& cell, RFor&& coef) {
     if (coef == zero<R>()) {
       return;
     }
 
-    const std::pair<MapIterType, bool> ins_result =
-        cells.insert(std::make_pair(std::forward<TFor>(cell), coef));
+    const std::pair<MapIterType, bool> ins_result
+        = cells.insert(std::make_pair(std::forward<TFor>(cell), coef));
 
     if (!ins_result.second) {
       (ins_result.first)->second += std::forward<RFor>(coef);
@@ -118,6 +118,11 @@ public:
         cells.erase(ins_result.first);
       }
     }
+  }
+
+  /** @brief Erase `cell` term (if it exists) from the chain. */
+  void erase(const T& cell) {
+    cells.erase(cell);
   }
 
   /** @brief Reset the element to default initialization state. */
@@ -223,8 +228,8 @@ public:
     if (coef == zero<R>()) {
       return;
     }
-    const std::pair<SetIterType, bool> ins_result =
-        cells.insert(std::forward<TFor>(cell));
+    const std::pair<SetIterType, bool> ins_result
+        = cells.insert(std::forward<TFor>(cell));
     if (!ins_result.second) {
       cells.erase(ins_result.first);
     }
@@ -233,6 +238,11 @@ public:
   /** @copydoc AssociativeModule::clear() */
   void clear() {
     cells.clear();
+  }
+
+  /** @copydoc AssociativeModule::erase() */
+  void erase(const T& cell) {
+    cells.erase(cell);
   }
 
   /** @copydoc AssociativeModule::operator+=() */
@@ -308,8 +318,8 @@ using SetModule = detail::UniqueModule<T, R, std::set<T>>;
  * @tparam Ring type modeling `Ring` concept.
  */
 template <Hashable T, Ring R>
-using UnorderedMapModule =
-    detail::AssociativeModule<T, R, std::unordered_map<T, R>>;
+using UnorderedMapModule
+    = detail::AssociativeModule<T, R, std::unordered_map<T, R>>;
 
 /**
  * @brief This class template implements a free `R`-module on basis set `T`. Its
