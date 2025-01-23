@@ -486,7 +486,7 @@ concept Module = requires(M mod) {
  *
  * @tparam M Module type.
  */
-template <Module M>
+template <ModulePrecursor M>
 using LinearMap = std::function<M(const typename M::BasisType&)>;
 
 /**
@@ -501,7 +501,7 @@ using LinearMap = std::function<M(const typename M::BasisType&)>;
  *
  * @sa `LinearMap`
  */
-template <Module M, typename F>
+template <ModulePrecursor M, typename F>
 requires std::convertible_to<F, LinearMap<M>>
 [[nodiscard]] M linear_apply(const M& elem, const F& func) {
   M result;

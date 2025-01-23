@@ -150,7 +150,7 @@ TEMPLATE_LIST_TEST_CASE(
   T cell_1 = std::tuple_element_t<2, TestType>();
   M elem_0;
 
-  LinearMap<M> lfunc = [&](const T& cell) {
+  const LinearMap<M> lfunc = [&](const T& cell) -> M {
     M result;
     result.insert(cell, one<R>());
     result.insert(cell_0, zero<R>());
