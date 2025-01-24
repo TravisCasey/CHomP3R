@@ -37,6 +37,8 @@ TEST_CASE("Simple CubicalComplex with CoreductionMatching", "[homology]") {
   const std::shared_ptr<PartialMatching<CC>> matching
       = std::make_shared<CoreductionMatching<CC>>(complex);
 
+  REQUIRE(matching->size() == 4);
+
   auto operator_pair = matching->compute_operators();
   auto morse_boundary = operator_pair.first;
   auto morse_coboundary = operator_pair.second;

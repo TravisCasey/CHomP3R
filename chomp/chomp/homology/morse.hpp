@@ -96,8 +96,9 @@ protected:
    * let K_1 be the match of queen Q_1; Then, this method must satisfy:
    * (queen_ordering(Q_1, Q_2) == true) => (Q_2 not in boundary(K_1))
    */
-  [[nodiscard]] virtual bool
-  queen_ordering(const CellType& lhs, const CellType& rhs) const = 0;
+  [[nodiscard]] virtual bool queen_ordering(const CellType& lhs,
+      const CellType& rhs) const
+      = 0;
 
   /**
    * @brief Strict weak ordering on king cells for gradient path computation.
@@ -105,13 +106,14 @@ protected:
    * let Q_1 be the match of queen K_1; Then, this method must satisfy:
    * (king_ordering(K_1, K_2) == true) => (K_2 not in coboundary(Q_1))
    */
-  [[nodiscard]] virtual bool
-  king_ordering(const CellType& lhs, const CellType& rhs) const = 0;
+  [[nodiscard]] virtual bool king_ordering(const CellType& lhs,
+      const CellType& rhs) const
+      = 0;
 
 private:
   using MatchedPairType = std::pair<CellType, ResultType>;
-  using CompareType =
-      std::function<bool(const MatchedPairType&, const MatchedPairType&)>;
+  using CompareType
+      = std::function<bool(const MatchedPairType&, const MatchedPairType&)>;
 
 public:
   /** @brief Deleted; handle derived classes through pointers. */
@@ -172,6 +174,18 @@ public:
   }
 
   /**
+   * @brief The number of critical cells in the partial matching.
+   *
+   * Iterated partial matching terminates when the number of critical cells
+   * no longer changes.
+   *
+   * @return std::size_t The number of critical cells in this matching.
+   */
+  [[nodiscard]] std::size_t size() const noexcept {
+    return critical_cells.size();
+  }
+
+  /**
    * @brief Compute the boundary and coboundary homomorphisms in the Morse
    * complex associated to this partial matching.
    *
@@ -182,8 +196,8 @@ public:
    * a map data structure from the basis to their result in the (co)chain
    * modules.
    */
-  [[nodiscard]] virtual std::pair<
-      MapType<CellType, ChainType>, MapType<CellType, ChainType>>
+  [[nodiscard]] virtual std::pair<MapType<CellType, ChainType>,
+      MapType<CellType, ChainType>>
   compute_operators() {
     MapType<CellType, ChainType> boundaries;
     MapType<CellType, ChainType> coboundaries;
@@ -229,13 +243,12 @@ public:
     RingType coef;
 
     // Yields maximal queens to process in the correct order.
-    std::priority_queue<
-        MatchedPairType, std::vector<MatchedPairType>, CompareType>
+    std::priority_queue<MatchedPairType, std::vector<MatchedPairType>,
+        CompareType>
         queen_queue(
             [this](const MatchedPairType& lhs, const MatchedPairType& rhs) {
               return this->queen_ordering(lhs.first, rhs.first);
-            }
-        );
+            });
 
     // Initialize queen_queue, queen_chain, ace_chain with elements of `chain`
     for (const CellType& cell : chain) {
@@ -264,8 +277,8 @@ public:
       match_pair = queen_queue.top();
       queen_queue.pop();
       coef = -incidence * invert(match_pair.second.coef());
-      boundary_chain =
-          coef * boundary(*upper_complex_ptr, match_pair.second.cell());
+      boundary_chain
+          = coef * boundary(*upper_complex_ptr, match_pair.second.cell());
 
       // Add queens in boundary to queen_queue/queen_chain & aces to ace_chain.
       for (const CellType& cell : boundary_chain) {
@@ -310,13 +323,12 @@ public:
     RingType coef;
 
     // Yields maximal queens to process in the correct order.
-    std::priority_queue<
-        MatchedPairType, std::vector<MatchedPairType>, CompareType>
+    std::priority_queue<MatchedPairType, std::vector<MatchedPairType>,
+        CompareType>
         queen_queue(
             [this](const MatchedPairType& lhs, const MatchedPairType& rhs) {
               return this->queen_ordering(lhs.first, rhs.first);
-            }
-        );
+            });
 
     // Initialize queen_queue and queen_chain with boundary of `chain`.
     for (const CellType& cell : boundary_chain) {
@@ -344,8 +356,8 @@ public:
       match_pair = queen_queue.top();
       queen_queue.pop();
       coef = -incidence * invert(match_pair.second.coef());
-      boundary_chain =
-          coef * boundary(*upper_complex_ptr, match_pair.second.cell());
+      boundary_chain
+          = coef * boundary(*upper_complex_ptr, match_pair.second.cell());
       king_chain.insert(std::move(match_pair.second.cell()), std::move(coef));
 
       // Add queens in boundary to queen_queue/queen_chain.
@@ -389,13 +401,12 @@ public:
     RingType coef;
 
     // Yields maximal kings to process in the correct order.
-    std::priority_queue<
-        MatchedPairType, std::vector<MatchedPairType>, CompareType>
+    std::priority_queue<MatchedPairType, std::vector<MatchedPairType>,
+        CompareType>
         king_queue(
             [this](const MatchedPairType& lhs, const MatchedPairType& rhs) {
               return this->king_ordering(lhs.first, rhs.first);
-            }
-        );
+            });
 
     // Initialize king_queue, king_chain, ace_chain with elements of `chain`
     for (const CellType& cell : chain) {
@@ -424,8 +435,8 @@ public:
       match_pair = king_queue.top();
       king_queue.pop();
       coef = -incidence * invert(match_pair.second.coef());
-      coboundary_chain =
-          coef * coboundary(*upper_complex_ptr, match_pair.second.cell());
+      coboundary_chain
+          = coef * coboundary(*upper_complex_ptr, match_pair.second.cell());
 
       // Add kings in coboundary to king_queue/king_chain & aces to ace_chain.
       for (const CellType& cell : coboundary_chain) {
@@ -470,13 +481,12 @@ public:
     RingType coef;
 
     // Yields maximal kings to process in the correct order.
-    std::priority_queue<
-        MatchedPairType, std::vector<MatchedPairType>, CompareType>
+    std::priority_queue<MatchedPairType, std::vector<MatchedPairType>,
+        CompareType>
         king_queue(
             [this](const MatchedPairType& lhs, const MatchedPairType& rhs) {
               return this->king_ordering(lhs.first, rhs.first);
-            }
-        );
+            });
 
     // Initialize king_queue and king_chain with coboundary of `chain`.
     for (const CellType& cell : coboundary_chain) {
@@ -504,8 +514,8 @@ public:
       match_pair = king_queue.top();
       king_queue.pop();
       coef = -incidence * invert(match_pair.second.coef());
-      coboundary_chain =
-          coef * coboundary(*upper_complex_ptr, match_pair.second.cell());
+      coboundary_chain
+          = coef * coboundary(*upper_complex_ptr, match_pair.second.cell());
       queen_chain.insert(std::move(match_pair.second.cell()), coef);
 
       // Add kings in coboundary to king_queue/king_chain.
@@ -569,10 +579,10 @@ private:
 
   // Based on the order of matching; earlier matched (lower priority) queens are
   // maximal w.r.t. queens matched later.
-  [[nodiscard]] bool
-  queen_ordering(const CellType& lhs, const CellType& rhs) const override {
-    if (this->upper_complex_ptr->grade(lhs) <
-        this->upper_complex_ptr->grade(rhs)) {
+  [[nodiscard]] bool queen_ordering(const CellType& lhs,
+      const CellType& rhs) const override {
+    if (this->upper_complex_ptr->grade(lhs)
+        < this->upper_complex_ptr->grade(rhs)) {
       return true;
     }
 
@@ -581,17 +591,16 @@ private:
     if (lhs_it == priority.cend() || rhs_it == priority.cend()) {
       throw std::invalid_argument(
           "Partial matching ordering function called on invalid cell; critical "
-          "cells cannot be ordered."
-      );
+          "cells cannot be ordered.");
     }
     return lhs_it->second < rhs_it->second;
   }
 
   // The inverse of the queen ordering
-  [[nodiscard]] bool
-  king_ordering(const CellType& lhs, const CellType& rhs) const override {
-    if (this->upper_complex_ptr->grade(lhs) >
-        this->upper_complex_ptr->grade(rhs)) {
+  [[nodiscard]] bool king_ordering(const CellType& lhs,
+      const CellType& rhs) const override {
+    if (this->upper_complex_ptr->grade(lhs)
+        > this->upper_complex_ptr->grade(rhs)) {
       return true;
     }
 
@@ -600,8 +609,7 @@ private:
     if (lhs_it == priority.cend() || rhs_it == priority.cend()) {
       throw std::invalid_argument(
           "Partial matching ordering function called on invalid cell; critical "
-          "cells cannot be ordered."
-      );
+          "cells cannot be ordered.");
     }
     return lhs_it->second > rhs_it->second;
   }
@@ -615,10 +623,9 @@ public:
    */
   CoreductionMatching(std::shared_ptr<CC> complex) :
       PartialMatching<CC, MapType>(complex) {
-    std::tie(matches, priority, this->critical_cells) =
-        detail::HasseCoreduction<CC, MapType>::compute_matching(
-            this->upper_complex_ptr
-        );
+    std::tie(matches, priority, this->critical_cells)
+        = detail::HasseCoreduction<CC, MapType>::compute_matching(
+            this->upper_complex_ptr);
   }
 
   /**
