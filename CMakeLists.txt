@@ -14,15 +14,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 if(CATCH2_TEST)
-    find_package(Catch2 3 REQUIRED)
     include(CTest)
+endif()
+
+if(CATCH2_TEST OR CATCH2_BENCH)
+    find_package(Catch2 3 REQUIRED)
     include(Catch)
 endif()
 
 set(CHOMP_DIR ${PROJECT_SOURCE_DIR}/chomp)
 add_subdirectory(${CHOMP_DIR})
 
-if(CATCH2_TEST)
+if(CATCH2_TEST OR CATCH2_BENCH)
     target_include_directories(tests PRIVATE chomp)
     target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 endif()

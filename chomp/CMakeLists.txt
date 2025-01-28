@@ -1,10 +1,11 @@
-if(CATCH2_TEST)
+if(CATCH2_TEST OR CATCH2_BENCH)
     set(TEST_SOURCES
         ${CHOMP_DIR}/chomp/algebra/algebra.test.cpp
         ${CHOMP_DIR}/chomp/algebra/cyclic.test.cpp
         ${CHOMP_DIR}/chomp/algebra/modules.test.cpp
         ${CHOMP_DIR}/chomp/complexes/cubical.test.cpp
         ${CHOMP_DIR}/chomp/complexes/grading.test.cpp
+        ${CHOMP_DIR}/chomp/complexes/morse.test.cpp
         ${CHOMP_DIR}/chomp/homology/cubical.test.cpp
         ${CHOMP_DIR}/chomp/homology/hasse.test.cpp
         ${CHOMP_DIR}/chomp/homology/morse.test.cpp

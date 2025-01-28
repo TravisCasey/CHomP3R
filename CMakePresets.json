@@ -22,6 +22,21 @@
       }
     },
     {
+      "name": "chomp-gcc-x86-native-profile",
+      "displayName": "GCC x86 Native Benchmarking with Debug Symbols",
+      "description": "Speed-optimized build with debug symbols for native x86 architecture compiled with GCC.",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/chomp-gcc-x86-native-profile",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-std=c++20 -march=native -mtune=native -O3 -pg",
+        "CATCH2_BENCH": "ON",
+        "CATCH2_TEST": "OFF"
+      },
+      "environment": {
+        "CXX": "/usr/bin/g++"
+      }
+    },
+    {
       "name": "chomp-gcc-distribution-bench",
       "displayName": "GCC Benchmarking",
       "description": "Speed-optimized benchmark build for distribution compiled with GCC.",
