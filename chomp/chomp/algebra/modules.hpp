@@ -40,7 +40,7 @@ namespace detail {
  *
  * @sa `UnorderedMapModule`, `MapModule`.
  */
-template <Basis T, Ring R, typename MapType>
+template <AssociativeKey T, Ring R, typename MapType>
 class AssociativeModule {
   MapType cells;
   using MapIterType = typename MapType::iterator;
@@ -192,7 +192,7 @@ public:
  *
  * @sa `UnorderedMapModule`, `MapModule`.
  */
-template <Basis T, BinaryRing R, typename SetType>
+template <AssociativeKey T, BinaryRing R, typename SetType>
 class UniqueModule {
   SetType cells;
   using SetIterType = typename SetType::iterator;
@@ -359,7 +359,7 @@ struct Chooser<false, true, T, R> {
   using type = SetModule<T, R>;
 };
 
-template <Basis T, Ring R>
+template <AssociativeKey T, Ring R>
 struct DefaultModuleChooser {
   using type = typename Chooser<Hashable<T>, BinaryRing<R>, T, R>::type;
 };
@@ -374,7 +374,7 @@ struct DefaultModuleChooser {
  * @tparam T Basis type.
  * @tparam R Coefficient ring type.
  */
-template <Basis T, Ring R>
+template <AssociativeKey T, Ring R>
 using DefaultModule = typename detail::DefaultModuleChooser<T, R>::type;
 
 }  // namespace chomp::core

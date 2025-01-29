@@ -27,17 +27,6 @@
 namespace chomp::core {
 
 /**
- * @brief Requirements on a class implementing a cell in a chain complex.
- *
- * Notably, it must model `Basis` for the purpose of being the basis in a class
- * modeling `Module`.
- *
- * @tparam C Cell type.
- */
-template <typename C>
-concept Cellular = std::regular<C> && Basis<C>;
-
-/**
  * @brief Alias for the function object type used as test conditions in the
  * `boundary_if` and `coboundary_if` free functions and methods in complex
  * classes.
@@ -63,7 +52,7 @@ concept ChainComplex = requires(
     typename CC::CellIterType it
 ) {
   requires Ring<typename CC::RingType>;
-  requires Cellular<typename CC::CellType>;
+  requires std::regular<typename CC::CellType>;
   requires Module<typename CC::ChainType>;
   requires Grading<typename CC::GradingType>;
   requires std::forward_iterator<typename CC::CellIterType>;

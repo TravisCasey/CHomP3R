@@ -16,17 +16,15 @@
 namespace chomp::core {
 
 TEST_CASE("Fundamental types and algebraic concepts", "[algebra]") {
-  CHECK_FALSE(Group<std::string>);
+  CHECK_FALSE(Ring<std::string>);
   CHECK(Ring<int>);
   CHECK(Ring<float>);
-  CHECK_FALSE(Group<void>);
+  CHECK_FALSE(Ring<void>);
   CHECK(Ring<char>);
   CHECK_FALSE(BinaryRing<char>);
 }
 
-TEST_CASE(
-    "Identity functions on fundamental types output correctly", "[algebra]"
-) {
+TEST_CASE("Identity functions on fundamental types.", "[algebra]") {
   CHECK(zero<int>() == 0);
   CHECK(zero<float>() == 0.0);
   CHECK(one<int>() == 1);

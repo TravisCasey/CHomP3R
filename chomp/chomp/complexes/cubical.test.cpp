@@ -135,7 +135,6 @@ TEST_CASE("Orthant class", "[complexes]") {
 
 TEST_CASE("Cube class", "[complexes]") {
   CHECK(Hashable<Cube<5>>);
-  CHECK(Cellular<Cube<10>>);
   CHECK(std::regular<Cube<3>>);
 
   SECTION("Default construction") {

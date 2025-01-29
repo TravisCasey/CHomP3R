@@ -14,7 +14,6 @@
 #define CHOMP_UTIL_HASSE_H
 
 #include <chomp/algebra/algebra.hpp>
-#include <chomp/complexes/complexes.hpp>
 
 #include <concepts>
 #include <type_traits>
@@ -70,10 +69,10 @@ inline constexpr Trichotomy Trichotomy::king(1);
  * Finally, the coefficient of incidence (type `R`) of the cell on its match is
  * given by the `coef` method.
  *
- * @tparam T The cell type modeling `Cellular`.
+ * @tparam T Cell type.
  * @tparam R The coefficient ring type modeling `Ring`.
  */
-template <Cellular T, Ring R>
+template <typename T, Ring R>
 class MatchResult {
 private:
   T match_cell;
