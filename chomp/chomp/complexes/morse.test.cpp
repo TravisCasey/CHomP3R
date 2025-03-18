@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <set>
 #include <string>
 #include <tuple>
 #include <type_traits>
