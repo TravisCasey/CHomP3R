@@ -90,10 +90,9 @@ public:
     CACHE_SIZE *= 1 << (CCDIM - SPAN - 1);
 
     stored_lower = std::make_unique<bool[]>(CACHE_SIZE);
-    lower = std::make_unique<GradingResultType[]>(CACHE_SIZE);
+    lower = std::make_unique_for_overwrite<GradingResultType[]>(CACHE_SIZE);
     stored_upper = std::make_unique<bool[]>(CACHE_SIZE);
-    upper = std::make_unique<GradingResultType[]>(CACHE_SIZE);
-    reset();
+    upper = std::make_unique_for_overwrite<GradingResultType[]>(CACHE_SIZE);
   }
 
   /*
