@@ -566,12 +566,13 @@ private:
   Used for computing individual matches via the `match` interface - is not used
   during main construction of the matching. It is assumed that there are far too
   many matches to store, so they must be recomputed if they are queried
-  individually. However, this method yields the same matching computed during
-  construction.
+  individually. However, this method is guaranteed to yield the same matching
+  computed during construction.
   */
 
   [[nodiscard]] ResultType match_helper(const CellType& cell,
-      const std::unique_ptr<Suborthant>& suborthant_ptr) const {
+      const std::unique_ptr<Suborthant>& suborthant_ptr,
+    const std::size_t skip_axes) const {
     if (suborthant_ptr->partition.empty()) {
       if (suborthant_ptr->match_axis == 0) {
         return ResultType(cell, one<RingType>(), Trichotomy::ace);
@@ -593,14 +594,17 @@ private:
     std::size_t excess_axes = cell.extent() & ~suborthant_ptr->prime_extent;
     auto it = suborthant_ptr->partition.cbegin();
     for (; axis != DIM; ++axis, axis_flag <<= 1, excess_axes >>= 1) {
+      if (skip_axes & axis_flag) {
+        continue;
+      }
       if (excess_axes == 0) {
-        return match_helper(cell, *it);
+        return match_helper(cell, *it, ~(suborthant_ptr->prime_extent | (axis_flag - 1)));
       }
       if (!(suborthant_ptr->prime_extent & axis_flag)) {
         ++it;
       }
     }
-    return match_helper(cell, *it);
+    return match_helper(cell, *it, ~(suborthant_ptr->prime_extent | (axis_flag - 1)));
   }
 
 
@@ -619,7 +623,7 @@ public:
     cache.reset();
     std::unique_ptr<Suborthant> suborthant_ptr
         = match_orthant(cell.base(), decrement_axes(cell.base())).second;
-    return match_helper(cell, suborthant_ptr);
+    return match_helper(cell, suborthant_ptr, 0);
   }
 
   [[nodiscard]] std::pair<MapType<CellType, ChainType>,
