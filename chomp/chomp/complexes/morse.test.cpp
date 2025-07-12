@@ -18,6 +18,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <set>
 #include <string>
@@ -99,8 +100,8 @@ TEMPLATE_LIST_TEST_CASE("Top cubical sphere benchmarks", "[!benchmark]",
         constexpr std::size_t CACHE_SPAN = 2;
         const std::shared_ptr<PartialMatching<ComplexType, DefaultMap>>
             morse_matching = std::make_shared<
-                CubicalMatching<ComplexType, DefaultMap, CACHE_SPAN>>(
-                input_complex, 0);
+                CubicalMatching<ComplexType, 0, std::numeric_limits<std::size_t>::max(), CACHE_SPAN>>(
+                input_complex);
         const std::shared_ptr<MorseComplex<ComplexType>> morse_complex
             = std::make_shared<MorseComplex<ComplexType>>(morse_matching);
         return full_reduce(morse_complex);

@@ -23,6 +23,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -40,7 +41,7 @@ struct PartialMatchingChooser {
 template <std::size_t CCDIM, Grading G, Ring R, Module M,
     template <typename, typename> typename MapType>
 struct PartialMatchingChooser<CubicalComplex<CCDIM, G, R, M>, MapType> {
-  using type = CubicalMatching<CubicalComplex<CCDIM, G, R, M>, MapType>;
+  using type = CubicalMatching<CubicalComplex<CCDIM, G, R, M>, BoundAccess<G>::Maximum, std::numeric_limits<std::size_t>::max(), 0, MapType>;
 };
 
 }  // namespace chomp::core::detail

@@ -102,6 +102,7 @@ TEST_CASE("CubicalMatching class.", "[homology]") {
     using GradingType = TopCubeSetGrading<2, 0, 1>;
     using ComplexType = CubicalComplex<2, GradingType>;
     using MatchingType = CubicalMatching<ComplexType>;
+    using GradeLimitedMatchingType = CubicalMatching<ComplexType, 0>;
     using ChainType = typename ComplexType::ChainType;
     using RingType = typename ComplexType::RingType;
 
@@ -126,7 +127,7 @@ TEST_CASE("CubicalMatching class.", "[homology]") {
     const std::shared_ptr<ComplexType> complex =
         std::make_shared<ComplexType>(Orthant<2>{7, 7}, grading_func);
     MatchingType matching(complex);
-    MatchingType max_grade_matching(complex, 0);
+    GradeLimitedMatchingType max_grade_matching(complex);
 
     SECTION("Morse (co)boundary operator and critical cells") {
       const std::set<Cube<2>> correct_zero_grades{
@@ -253,10 +254,11 @@ TEMPLATE_LIST_TEST_CASE(
 
   using GradingType = TopCubeSetGrading<dim, 0, 1>;
   using ComplexType = CubicalComplex<dim, GradingType>;
-  using MatchingType = CubicalMatching<ComplexType>;
   using ChainType = typename ComplexType::ChainType;
 
   SECTION("n-dimensional S1, Z2 coefficients") {
+    using MatchingType = CubicalMatching<ComplexType, 0, 1>;
+
     Orthant<dim> maximum{};
     maximum[0] = 2;
     maximum[1] = 2;
@@ -287,7 +289,7 @@ TEMPLATE_LIST_TEST_CASE(
 
     const std::shared_ptr<ComplexType> complex =
         std::make_shared<ComplexType>(maximum, grading_func);
-    MatchingType matching(complex, 0, 1);
+    MatchingType matching(complex);
     const auto [boundaries, coboundaries] = matching.compute_operators();
 
     for (const auto& [ace, boundary_chain] : boundaries) {
@@ -299,6 +301,8 @@ TEMPLATE_LIST_TEST_CASE(
   }
 
   SECTION("n-dimensional Sn-1 with Z2 coefficients") {
+    using MatchingType = CubicalMatching<ComplexType>;
+
     Orthant<dim> maximum{};
     Orthant<dim> hole{};
     for (std::size_t axis = 0; axis != dim; ++axis) {

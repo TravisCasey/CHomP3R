@@ -163,14 +163,30 @@ namespace chomp::core {
  * @tparam CC The chain complex type (models `ChainComplex`) that the partial
  * matching is computed on. Must be a specialization of `CubicalComplex` with
  * a `grade` member function specialization for `Orthant` objects.
+ * @tparam GRADE_MAX The maximum (inclusive) grade for which critical cells are
+ * computed. The (co)homology groups of the associated Morse complex will be
+ * isomorphic in grades less than or equal to `GRADE_MAX`. Default value
+ * includes all cell grades in the complex type `CC`.
+ * @tparam DIM_MAX The maximum (inclusive) cell dimension for which critical
+ * cells are computed. The (co)homology groups of the associated Morse complex
+ * will be isomorphic in dimensions strictly less than `DIM_MAX`. Default value
+ * includes all cell dimensions.
+ * @tparam CACHE_SPAN A parameter controlling the size of the grade query cache.
+ * The cache size is proportional to the product of the number of orthants along
+ * the first `CACHE_SPAN` axes in the cubical complex type `CC`. Increasing it
+ * reduces repeated queries at the cost of memory overhead. Default value is 0.
  * @tparam MapType Associative container template used to store the computed
  * boundary and coboundary homomorphisms for the induced Morse complex. The cell
  * type of `CC` (which is the corresponding `Cube` specialization) is the key
  * type while the value type is the chain type of `CC`. Default value is
  * `DefaultMap`.
  */
-template <ChainComplex CC, template <typename...> typename MapType = DefaultMap,
-    std::size_t CACHE_SPAN = 0>
+template <ChainComplex CC,
+    GradingResultType GRADE_MAX
+    = BoundAccess<typename CC::GradingType>::Maximum,
+    std::size_t DIM_MAX = std::numeric_limits<std::size_t>::max(),
+    std::size_t CACHE_SPAN = 0,
+    template <typename...> typename MapType = DefaultMap>
 requires detail::Cubical<CC> && requires(CC c, Orthant<CC::dimension> o) {
   { c.grade(o) } -> std::convertible_to<GradingResultType>;
 }
@@ -272,19 +288,11 @@ private:
   `flow` method) until they reach other critical cells, at which point they are
   added to `boundaries`. These are the boundary maps of the reduced Morse
   complex being computed.
-
-  `GRADE_CUTOFF` and `DIM_CUTOFF` are optional parameters that define a
-  maximum (inclusive) grade and cell dimension to include in the newly-formed
-  Morse complex. The (co)homology groups will only be isomorphic in grades less
-  than or equal to `GRADE_CUTOFF` and in dimensions strictly less than
-  `DIM_CUTOFF`.
   */
 
   CacheType cache{this->upper_complex_ptr};
   MapType<CellType, ChainType> boundaries{};
   std::map<Orthant<DIM>, AceMapType, ReverseLexCompare> gradient{};
-  GradingResultType GRADE_CUTOFF;
-  std::size_t DIM_CUTOFF;
 
   /*
   Adds cell `extent` with coefficient to `coef` to the extent chain in
@@ -342,14 +350,14 @@ private:
       const std::size_t minimum_extent, const std::size_t minimum_dim) {
     // Critical cell
     if (maximum_extent == minimum_extent) {
-      if (maximum_grade <= GRADE_CUTOFF && minimum_dim <= DIM_CUTOFF) {
+      if (maximum_grade <= GRADE_MAX && minimum_dim <= DIM_MAX) {
         critical_extents.push_back(minimum_extent);
       }
       return std::make_unique<Suborthant>(maximum_extent, minimum_extent);
     }
 
     // All cells are matched without further analysis
-    if (maximum_grade == GRADE_MIN || minimum_dim > DIM_CUTOFF) {
+    if (maximum_grade == GRADE_MIN || minimum_dim > DIM_MAX) {
       return std::make_unique<Suborthant>(maximum_extent, minimum_extent);
     }
 
@@ -506,13 +514,8 @@ private:
 
 
 public:
-  CubicalMatching(std::shared_ptr<ComplexType> complex,
-      GradingResultType maximum_grade
-      = BoundAccess<typename CC::GradingType>::Maximum,
-      std::size_t maximum_dimension = std::numeric_limits<std::size_t>::max()) :
-      PartialMatching<CC, MapType>(complex),
-      GRADE_CUTOFF(maximum_grade),
-      DIM_CUTOFF(maximum_dimension) {
+  CubicalMatching(std::shared_ptr<ComplexType> complex) :
+      PartialMatching<CC, MapType>(complex) {
     Orthant<DIM> lower_minimum
         = decrement_axes(this->upper_complex_ptr->minimum());
     Orthant<DIM> lower_maximum
