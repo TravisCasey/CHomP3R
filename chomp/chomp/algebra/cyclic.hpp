@@ -65,7 +65,7 @@ public:
   /**
    * @brief Get the divisor `p`.
    *
-   * @return T
+   * @return int
    */
   [[nodiscard]] static constexpr int divisor() noexcept {
     return p;
@@ -222,7 +222,7 @@ public:
   /**
    * @brief Get the divisor, `2`.
    *
-   * @return T
+   * @return int
    */
   [[nodiscard]] static constexpr int divisor() noexcept {
     return 2;
