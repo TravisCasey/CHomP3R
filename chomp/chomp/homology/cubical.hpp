@@ -450,8 +450,8 @@ private:
       }
 
       // matches
-      // Store in a temporary vector to get around iterator invalidation in
-      // chain
+      // Store in temporary vector `suborthant_cells` as a workaround for
+      // iterator invalidation in chain
       std::vector<std::size_t> suborthant_cells;
       for (const std::size_t extent : chain) {
         // prime extent must be face of extent
@@ -513,6 +513,17 @@ private:
 
 
 public:
+  /**
+   * @brief Compute an optimized partial matching on the cubical complex
+   * `complex`.
+   *
+   * This class is typically handled through a smart pointer to the base class
+   * template `PartialMatching`. It can be used to construct a reduced
+   * `MorseComplex` specialization based on this partial matching.
+   *
+   * @param complex A (smart pointer to a) cubical complex whose grading is
+   * determined by top-dimensional cubes.
+   */
   CubicalMatching(std::shared_ptr<ComplexType> complex) :
       PartialMatching<CC, MapType>(complex) {
     Orthant<DIM> lower_minimum
@@ -611,16 +622,38 @@ private:
 
 
 public:
+  /**
+   * @brief A partial ordering on queen cells that is compatible with the
+   * ordering on queens induced by a partial matching.
+   *
+   * This is used for the (co)lift and (co)lower routines.
+   */
   [[nodiscard]] bool queen_ordering(const CellType& lhs,
       const CellType& rhs) const override {
     return lhs.base() > rhs.base();
   }
-
+  /**
+   * @brief A partial ordering on king cells that is compatible with the
+   * ordering on kings induced by a partial matching.
+   *
+   * This is used for the (co)lift and (co)lower routines.
+   */
   [[nodiscard]] bool king_ordering(const CellType& lhs,
       const CellType& rhs) const override {
     return lhs.base() < rhs.base();
   }
 
+  /**
+   * @brief Query the match of `cell` under this partial matching.
+   *
+   * Note that the results may be nonsensical if the grade or dimension of
+   * `cell` exceeds the `GRADE_MAX` or `DIM_MAX` template parameters,
+   * respectively.
+   *
+   * @param cell The cell to query the match of.
+   * @return ResultType The matched cell, incidence between them, and
+   * designation as queen, king, or ace.
+   */
   [[nodiscard]] ResultType match(const CellType& cell) override {
     cache.reset();
     std::unique_ptr<Suborthant> suborthant_ptr
