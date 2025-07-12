@@ -26,6 +26,6 @@ set(CHOMP_DIR ${PROJECT_SOURCE_DIR}/chomp)
 add_subdirectory(${CHOMP_DIR})
 
 if(CATCH2_TEST OR CATCH2_BENCH)
-    target_include_directories(tests PRIVATE chomp)
+    target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR})
     target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 endif()

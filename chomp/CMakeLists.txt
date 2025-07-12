@@ -1,18 +1,18 @@
 if(CATCH2_TEST OR CATCH2_BENCH)
     set(TEST_SOURCES
-        ${CHOMP_DIR}/chomp/algebra/algebra.test.cpp
-        ${CHOMP_DIR}/chomp/algebra/cyclic.test.cpp
-        ${CHOMP_DIR}/chomp/algebra/modules.test.cpp
-        ${CHOMP_DIR}/chomp/complexes/cubical.test.cpp
-        ${CHOMP_DIR}/chomp/complexes/grading.test.cpp
-        ${CHOMP_DIR}/chomp/complexes/morse.test.cpp
-        ${CHOMP_DIR}/chomp/homology/cubical.test.cpp
-        ${CHOMP_DIR}/chomp/homology/hasse.test.cpp
-        ${CHOMP_DIR}/chomp/homology/morse.test.cpp
-        ${CHOMP_DIR}/chomp/util/cache.test.cpp
-        ${CHOMP_DIR}/chomp/util/concepts.test.cpp
-        ${CHOMP_DIR}/chomp/util/iterators.test.cpp
-        ${CHOMP_DIR}/chomp/util/morse.test.cpp)
+        ${CHOMP_DIR}/core/algebra/algebra.test.cpp
+        ${CHOMP_DIR}/core/algebra/cyclic.test.cpp
+        ${CHOMP_DIR}/core/algebra/modules.test.cpp
+        ${CHOMP_DIR}/core/complexes/cubical.test.cpp
+        ${CHOMP_DIR}/core/complexes/grading.test.cpp
+        ${CHOMP_DIR}/core/complexes/morse.test.cpp
+        ${CHOMP_DIR}/core/homology/cubical.test.cpp
+        ${CHOMP_DIR}/core/homology/hasse.test.cpp
+        ${CHOMP_DIR}/core/homology/morse.test.cpp
+        ${CHOMP_DIR}/core/util/cache.test.cpp
+        ${CHOMP_DIR}/core/util/concepts.test.cpp
+        ${CHOMP_DIR}/core/util/iterators.test.cpp
+        ${CHOMP_DIR}/core/util/morse.test.cpp)
 
     add_executable(tests ${TEST_SOURCES})
     catch_discover_tests(tests)
