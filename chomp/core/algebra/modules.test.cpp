@@ -26,7 +26,8 @@ namespace chomp::core {
 
 struct HashableCell {
   std::size_t val;
-  explicit constexpr HashableCell(std::size_t n) noexcept : val(n) {};
+  explicit constexpr HashableCell(std::size_t n) noexcept :
+      val(n) {};
   constexpr bool operator==(const HashableCell& rhs) const noexcept {
     return val == rhs.val;
   }
@@ -47,10 +48,11 @@ namespace chomp::core {
 
 struct ComparableCell {
   int val;
-  explicit constexpr ComparableCell(int n) noexcept : val(n) {};
+  explicit constexpr ComparableCell(int n) noexcept :
+      val(n) {};
 
-  constexpr std::strong_ordering operator<=>(const ComparableCell& rhs
-  ) const noexcept {
+  constexpr std::strong_ordering operator<=>(
+      const ComparableCell& rhs) const noexcept {
     return val <=> rhs.val;
   }
 
@@ -61,36 +63,23 @@ struct ComparableCell {
 
 using ModuleTypes = std::tuple<
 
-    std::tuple<
-        UnorderedSetModule<int, Z<2>>, std::integral_constant<int, 3>,
-        std::integral_constant<int, -25>>,
-
-    std::tuple<
-        SetModule<ComparableCell, Z<2>>,
-        std::integral_constant<ComparableCell, ComparableCell(20)>,
-        std::integral_constant<ComparableCell, ComparableCell(-3)>>,
-
-    std::tuple<
-        UnorderedMapModule<HashableCell, Z<14>>,
+    std::tuple<UnorderedMapModule<HashableCell, Z<14>>,
         std::integral_constant<HashableCell, HashableCell(2445)>,
         std::integral_constant<HashableCell, HashableCell(0)>>,
 
-    std::tuple<
-        MapModule<bool, int>, std::integral_constant<bool, true>,
+    std::tuple<MapModule<bool, int>, std::integral_constant<bool, true>,
         std::integral_constant<bool, false>>
 
     >;
 
-TEMPLATE_LIST_TEST_CASE(
-    "Module classes model Module concept", "[algebra]", ModuleTypes
-) {
+TEMPLATE_LIST_TEST_CASE("Module classes model Module concept", "[algebra]",
+    ModuleTypes) {
   using M = std::tuple_element_t<0, TestType>;
   CHECK(Module<M>);
 }
 
-TEMPLATE_LIST_TEST_CASE(
-    "Module classes access, insertion, and iteration", "[algebra]", ModuleTypes
-) {
+TEMPLATE_LIST_TEST_CASE("Module classes access, insertion, and iteration",
+    "[algebra]", ModuleTypes) {
   using M = std::tuple_element_t<0, TestType>;
   using T = typename M::BasisType;
   using R = typename M::RingType;
@@ -140,9 +129,8 @@ TEMPLATE_LIST_TEST_CASE(
   REQUIRE(elem[cell_1] == zero<R>());
 }
 
-TEMPLATE_LIST_TEST_CASE(
-    "Linear function interface to modules", "[algebra]", ModuleTypes
-) {
+TEMPLATE_LIST_TEST_CASE("Linear function interface to modules", "[algebra]",
+    ModuleTypes) {
   using M = std::tuple_element_t<0, TestType>;
   using T = typename M::BasisType;
   using R = typename M::RingType;
@@ -180,9 +168,8 @@ TEMPLATE_LIST_TEST_CASE(
   REQUIRE(elem_1[cell_1] == zero<R>());
 }
 
-TEMPLATE_LIST_TEST_CASE(
-    "Comparison operators on modules", "[algebra]", ModuleTypes
-) {
+TEMPLATE_LIST_TEST_CASE("Comparison operators on modules", "[algebra]",
+    ModuleTypes) {
   using M = std::tuple_element_t<0, TestType>;
   using T = typename M::BasisType;
   using R = typename M::RingType;
@@ -206,9 +193,8 @@ TEMPLATE_LIST_TEST_CASE(
   REQUIRE_FALSE(elem_0 != elem_1);
 }
 
-TEMPLATE_LIST_TEST_CASE(
-    "Arithmetic operators on modules", "[algebra]", ModuleTypes
-) {
+TEMPLATE_LIST_TEST_CASE("Arithmetic operators on modules", "[algebra]",
+    ModuleTypes) {
   using M = std::tuple_element_t<0, TestType>;
   using T = typename M::BasisType;
   using R = typename M::RingType;
@@ -285,14 +271,11 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 using CellAndRingTypes = std::tuple<
-    std::tuple<int, Z<2>, UnorderedSetModule<int, Z<2>>>,
     std::tuple<int, Z<3>, UnorderedMapModule<int, Z<3>>>,
-    std::tuple<std::vector<short>, Z<2>, SetModule<std::vector<short>, Z<2>>>,
     std::tuple<std::vector<short>, Z<5>, MapModule<std::vector<short>, Z<5>>>>;
 
-TEMPLATE_LIST_TEST_CASE(
-    "DefaultModule chooses Module type correctly", "[algebra]", CellAndRingTypes
-) {
+TEMPLATE_LIST_TEST_CASE("DefaultModule chooses Module type correctly",
+    "[algebra]", CellAndRingTypes) {
   using T = std::tuple_element_t<0, TestType>;
   using R = std::tuple_element_t<1, TestType>;
   using M = std::tuple_element_t<2, TestType>;

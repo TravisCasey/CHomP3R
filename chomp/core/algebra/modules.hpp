@@ -18,10 +18,8 @@
 
 #include <concepts>
 #include <map>
-#include <set>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 namespace chomp::core {
@@ -179,133 +177,7 @@ public:
   }
 };
 
-
-/**
- * @brief Common implementation for `UnorderedSetModule` and `SetModule`.
- *
- * It is preferable to use the template aliases in the `chomp::core` namespace
- * than to directly access this.
- *
- * @tparam T Basis type.
- * @tparam R Coefficient ring type.
- * @tparam SetType Either `std::unordered_set<T>` or `std::set<T>`.
- *
- * @sa `UnorderedMapModule`, `MapModule`.
- */
-template <AssociativeKey T, BinaryRing R, typename SetType>
-class UniqueModule {
-  SetType cells;
-  using SetIterType = typename SetType::iterator;
-  using SetCIterType = typename SetType::const_iterator;
-  using NodeType = typename SetType::node_type;
-
-public:
-  /** @copydoc AssociativeModule::BasisType */
-  using BasisType = T;
-  /** @copydoc AssociativeModule::RingType */
-  using RingType = R;
-  /** @copydoc AssociativeModule::BasisIterType */
-  using BasisIterType = SetCIterType;
-
-  /** @copydoc AssociativeModule::operator[]() */
-  [[nodiscard]] R operator[](const T& cell) const {
-    return cells.count(cell) == 0 ? zero<R>() : one<R>();
-  }
-
-  /** @copydoc AssociativeModule::begin() */
-  [[nodiscard]] BasisIterType begin() const noexcept {
-    return cells.cbegin();
-  }
-  /** @copydoc AssociativeModule::end() */
-  [[nodiscard]] BasisIterType end() const noexcept {
-    return cells.cend();
-  }
-
-  /** @copydoc AssociativeModule::insert() */
-  template <typename TFor>
-  requires std::same_as<std::remove_cvref_t<TFor>, T>
-  void insert(TFor&& cell, const R& coef) {
-    if (coef == zero<R>()) {
-      return;
-    }
-    const std::pair<SetIterType, bool> ins_result
-        = cells.insert(std::forward<TFor>(cell));
-    if (!ins_result.second) {
-      cells.erase(ins_result.first);
-    }
-  }
-
-  /** @copydoc AssociativeModule::clear() */
-  void clear() {
-    cells.clear();
-  }
-
-  /** @copydoc AssociativeModule::erase() */
-  void erase(const T& cell) {
-    cells.erase(cell);
-  }
-
-  /** @copydoc AssociativeModule::operator+=() */
-  UniqueModule& operator+=(UniqueModule&& rhs) {
-    for (SetCIterType it = rhs.cells.cbegin(); it != rhs.cells.cend();) {
-      // Avoid invalidation of iterator with postincrement.
-      const NodeType nh = rhs.cells.extract(it++);
-      insert(std::move(nh.value()), one<RingType>());
-    }
-    return *this;
-  }
-
-  /** @copydoc AssociativeModule::operator-=() */
-  UniqueModule& operator-=(UniqueModule&& rhs) {
-    for (SetCIterType it = rhs.cells.cbegin(); it != rhs.cells.cend();) {
-      // Avoid invalidation of iterator with postincrement.
-      const NodeType nh = rhs.cells.extract(it++);
-      insert(std::move(nh.value()), one<RingType>());
-    }
-    return *this;
-  }
-
-  /** @copydoc AssociativeModule::operator==() */
-  bool operator==(const UniqueModule& rhs) const {
-    return cells == rhs.cells;
-  }
-};
-
-
 }  // namespace detail
-
-
-/**
- * @brief This class template implements a free `R`-module on basis set `T`. Its
- * instantiations are elements of this `R`-module, which are formal `R`-linear
- * combinations of elements of the basis set `T`.
- *
- * The implementation uses `std::unordered_set` to store the cells. The
- * coefficient ring `R` is required to be binary-valued (`BinaryRing`). These
- * coefficients are not explicitly stored in this implementation and are instead
- * based on inclusion in the set.
- *
- * @tparam T Basis type modeling `Hashable` concept.
- * @tparam R Ring type modeling `BinaryRing` concept.
- */
-template <Hashable T, BinaryRing R>
-using UnorderedSetModule = detail::UniqueModule<T, R, std::unordered_set<T>>;
-
-/**
- * @brief This class template implements a free `R`-module on basis set `T`. Its
- * instantiations are elements of this `R`-module, which are formal `R`-linear
- * combinations of elements of the basis set `T`.
- *
- * The implementation uses `std::set` to store the cells. The coefficient ring
- * `R` is required to be binary-valued (`BinaryRing`). These coefficients are
- * not explicitly stored in this implementation and are instead based on
- * inclusion in the set.
- *
- * @tparam T Basis type modeling `Comparable` concept.
- * @tparam Ring type modeling `BinaryRing` concept.
- */
-template <Comparable T, BinaryRing R>
-using SetModule = detail::UniqueModule<T, R, std::set<T>>;
 
 /**
  * @brief This class template implements a free `R`-module on basis set `T`. Its
@@ -339,29 +211,19 @@ using MapModule = detail::AssociativeModule<T, R, std::map<T, R>>;
 namespace detail {
 #ifndef CHOMP_DOXYGEN
 
-template <bool H, bool B, typename T, typename R>
+template <bool H, typename T, typename R>
 struct Chooser {
   using type = MapModule<T, R>;
 };
 
 template <typename T, typename R>
-struct Chooser<true, true, T, R> {
-  using type = UnorderedSetModule<T, R>;
-};
-
-template <typename T, typename R>
-struct Chooser<true, false, T, R> {
+struct Chooser<true, T, R> {
   using type = UnorderedMapModule<T, R>;
-};
-
-template <typename T, typename R>
-struct Chooser<false, true, T, R> {
-  using type = SetModule<T, R>;
 };
 
 template <AssociativeKey T, Ring R>
 struct DefaultModuleChooser {
-  using type = typename Chooser<Hashable<T>, BinaryRing<R>, T, R>::type;
+  using type = typename Chooser<Hashable<T>, T, R>::type;
 };
 
 #endif  // CHOMP_DOXYGEN

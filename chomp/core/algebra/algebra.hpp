@@ -69,7 +69,7 @@ concept Ring = std::regular<R> && requires(R a, R b) {
   { -a } -> std::convertible_to<R>;
   { a + b } -> std::convertible_to<R>;
   { a - b } -> std::convertible_to<R>;
-  { a* b } -> std::convertible_to<R>;
+  { a * b } -> std::convertible_to<R>;
   { a += b } -> std::convertible_to<R&>;
   { a -= b } -> std::convertible_to<R&>;
   { a *= b } -> std::convertible_to<R&>;
@@ -88,7 +88,7 @@ concept Ring = std::regular<R> && requires(R a, R b) {
  * @return The additive identity of `R`.
  */
 template <Group R>
-[[nodiscard]] constexpr R zero() {
+[[nodiscard]] R zero() {
   return static_cast<R>(0);
 }
 
@@ -105,28 +105,9 @@ template <Group R>
  * @return Multiplicative identity of `R`.
  */
 template <Ring R>
-[[nodiscard]] constexpr R one() {
+[[nodiscard]] R one() {
   return static_cast<R>(1);
 }
-
-/**
- * @brief Classes implementing this concept represent the ring (in fact, field)
- * with two elements.
- *
- * While algebraically there is only one such ring, there may be different data
- * structures implementing it.
- *
- * Module classes over a class implementing `BinaryRing` can be represented
- * efficiently by only implicitly storing these coefficients.
- *
- * @tparam R `Ring`-modeling type that models the ring with two elements.
- */
-template <typename R>
-concept BinaryRing = requires {
-  requires Ring<R>;
-  requires one<R>() != zero<R>();
-  requires one<R>() + one<R>() == zero<R>();
-};
 
 /**
  * @brief Return the multiplicative inverse of `value` in `R`, should it exist.
@@ -383,7 +364,7 @@ requires Module<std::remove_cvref_t<M>>
              typename std::remove_cvref_t<M>::RingType>
 [[nodiscard]] std::remove_cvref_t<M> operator*(M&& elem, R&& coef) {
   std::remove_cvref_t<M> result(std::forward<M>(elem));
-  result *= coef;
+  result *= std::forward<R>(coef);
   return result;
 }
 
@@ -401,7 +382,7 @@ requires Module<std::remove_cvref_t<M>>
              typename std::remove_cvref_t<M>::RingType>
 [[nodiscard]] std::remove_cvref_t<M> operator*(R&& coef, M&& elem) {
   std::remove_cvref_t<M> result(std::forward<M>(elem));
-  result *= coef;
+  result *= std::forward<R>(coef);
   return result;
 }
 

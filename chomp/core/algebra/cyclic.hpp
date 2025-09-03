@@ -13,8 +13,10 @@
 
 #include <chomp/core/algebra/algebra.hpp>
 
+#include <flint/flint.h>
+#include <flint/nmod.h>
+
 #include <concepts>
-#include <limits>
 #include <stdexcept>
 
 namespace chomp::core {
@@ -32,13 +34,14 @@ namespace chomp::core {
  *
  * @tparam p Divisor value; required p > 1 and `p * p <= max(int)`.
  */
-template <int p>
-requires requires {
-  p > 1;
-  p <= std::numeric_limits<int>::max() / p;
-}
+template <unsigned int p>
+requires requires { p > 1; }
 class Z {
-  int value;
+  nmod_t modulus;
+  unsigned long value = 0;
+
+  explicit Z(nmod_t modulus, unsigned long value) :
+      modulus(modulus), value(value) {}
 
 public:
   /**
@@ -46,12 +49,10 @@ public:
    *
    * @param n
    */
-  constexpr explicit Z(int n = 0) : value(n % p) {
-    if (value < 0) {
-      value += p;
-    }
+  explicit Z(int n = 0) {
+    nmod_init(&modulus, static_cast<unsigned long>(p));
+    value += nmod_set_si(n, modulus);
   }
-  // % operator truncates towards zero
 
   /**
    * @brief Get the equivalence class representative (i.e. the value modulo
@@ -59,15 +60,15 @@ public:
    *
    * @return int
    */
-  [[nodiscard]] constexpr int rep() const noexcept {
-    return value;
+  [[nodiscard]] int rep() const noexcept {
+    return static_cast<int>(value);
   }
   /**
    * @brief Get the divisor `p`.
    *
    * @return int
    */
-  [[nodiscard]] static constexpr int divisor() noexcept {
+  [[nodiscard]] static uint divisor() noexcept {
     return p;
   }
 
@@ -76,8 +77,8 @@ public:
    *
    * @return Z
    */
-  [[nodiscard]] constexpr Z operator-() const noexcept {
-    return Z(p - value);  // Result in [0, p-1]
+  [[nodiscard]] Z operator-() const noexcept {
+    return Z(modulus, nmod_neg(value, modulus));
   }
   /**
    * @brief Sum operator modulo `p`.
@@ -85,10 +86,8 @@ public:
    * @param rhs
    * @return Z
    */
-  [[nodiscard]] constexpr Z operator+(const Z& rhs) const noexcept {
-    Z result(*this);  // copy constructor avoids conditionals in constructor
-    result += rhs;
-    return result;
+  [[nodiscard]] Z operator+(const Z& rhs) const noexcept {
+    return Z(modulus, nmod_add(value, rhs.value, modulus));
   }
   /**
    * @brief Difference operator modulo `p`.
@@ -96,10 +95,8 @@ public:
    * @param rhs
    * @return Z
    */
-  [[nodiscard]] constexpr Z operator-(const Z& rhs) const noexcept {
-    Z result(*this);
-    result -= rhs;
-    return result;
+  [[nodiscard]] Z operator-(const Z& rhs) const noexcept {
+    return Z(modulus, nmod_sub(value, rhs.value, modulus));
   }
   /**
    * @brief Product operator modulo `p`.
@@ -107,10 +104,8 @@ public:
    * @param rhs
    * @return Z
    */
-  [[nodiscard]] constexpr Z operator*(const Z& rhs) const noexcept {
-    Z result(*this);
-    result *= rhs;
-    return result;
+  [[nodiscard]] Z operator*(const Z& rhs) const noexcept {
+    return Z(modulus, nmod_mul(value, rhs.value, modulus));
   }
 
   /**
@@ -120,7 +115,7 @@ public:
    * @return true If the `Z` instances are equivalent modulo `p`.
    * @return false Otherwise.
    */
-  [[nodiscard]] constexpr bool operator==(const Z& rhs) const noexcept {
+  [[nodiscard]] bool operator==(const Z& rhs) const noexcept {
     return value == rhs.value;
   }
 
@@ -130,11 +125,8 @@ public:
    * @param rhs
    * @return Z&
    */
-  constexpr Z& operator+=(const Z& rhs) noexcept {
-    value += rhs.value;  // safe from overflow as p * p <= max(int)
-    if (value >= p) {
-      value -= p;
-    }
+  Z& operator+=(const Z& rhs) noexcept {
+    value = nmod_add(value, rhs.value, modulus);
     return *this;
   }
   /**
@@ -143,11 +135,8 @@ public:
    * @param rhs
    * @return Z&
    */
-  constexpr Z& operator-=(const Z& rhs) noexcept {
-    value += (p - rhs.value);
-    if (value >= p) {
-      value -= p;
-    }
+  Z& operator-=(const Z& rhs) noexcept {
+    value = nmod_sub(value, rhs.value, modulus);
     return *this;
   }
   /**
@@ -156,8 +145,8 @@ public:
    * @param rhs
    * @return Z&
    */
-  constexpr Z& operator*=(const Z& rhs) noexcept {
-    value = (value * rhs.value) % p;  // safe as p * p <= max(int)
+  Z& operator*=(const Z& rhs) noexcept {
+    value = nmod_mul(value, rhs.value, modulus);
     return *this;
   }
 
@@ -170,161 +159,9 @@ public:
   [[nodiscard]] Z invert() const {
     if (value == 0) {
       throw std::domain_error(
-          "Attempted to invert a ring element that is not a unit."
-      );
+          "Attempted to invert a ring element that is not a unit.");
     }
-
-    // Exponentiation by squaring is safe as all values are less than p * p
-    int exponent = p - 2;
-    Z result = Z(1);
-    Z temp(*this);
-
-    while (exponent > 0) {
-      if (exponent % 2 == 1) {
-        result *= temp;
-      }
-      temp *= temp;
-      exponent /= 2;
-    }
-
-    return result;
-  }
-};
-
-/**
- * @brief The two-element ring (field).
- *
- * Specialized for the common use case of using the two element ring `Z<2>` as
- * the coefficient ring of choice.
- */
-template <>
-class Z<2> {
-  bool odd;
-
-public:
-  /**
-   * @brief Construct a new `Z` object with value `n` modulo `2`.
-   *
-   * @param n
-   */
-  constexpr explicit Z(int n = 0) : odd(n & 1U) {}
-  // Using 1U works for one's complement systems as well
-
-  /**
-   * @brief Get the equivalence class representative (i.e. the value modulo `2`)
-   * in the range `{0, 1}`.
-   *
-   * @return int
-   */
-  [[nodiscard]] constexpr int rep() const noexcept {
-    return odd;
-  }
-  /**
-   * @brief Get the divisor, `2`.
-   *
-   * @return int
-   */
-  [[nodiscard]] static constexpr int divisor() noexcept {
-    return 2;
-  }
-
-  /**
-   * @brief Negative operator modulo `2` (no effect).
-   *
-   * @return Z
-   */
-  [[nodiscard]] constexpr Z operator-() const noexcept {
-    return *this;
-  }
-  /**
-   * @brief Sum operator modulo `2`.
-   *
-   * @param rhs
-   * @return Z
-   */
-  [[nodiscard]] constexpr Z operator+(const Z& rhs) const noexcept {
-    Z result(*this);  // copy constructor avoids conditionals in constructor
-    result += rhs;
-    return result;
-  }
-  /**
-   * @brief Difference operator modulo `2`.
-   *
-   * @param rhs
-   * @return Z
-   */
-  [[nodiscard]] constexpr Z operator-(const Z& rhs) const noexcept {
-    Z result(*this);
-    result -= rhs;
-    return result;
-  }
-  /**
-   * @brief Product operator modulo `2`.
-   *
-   * @param rhs
-   * @return Z
-   */
-  [[nodiscard]] constexpr Z operator*(const Z& rhs) const noexcept {
-    Z result(*this);
-    result *= rhs;
-    return result;
-  }
-
-  /**
-   * @brief Equality operator modulo `2`.
-   *
-   * @param rhs
-   * @return true If the `Z` instances are equivalent modulo `2`.
-   * @return false Otherwise.
-   */
-  [[nodiscard]] constexpr bool operator==(const Z& rhs) const noexcept {
-    return odd == rhs.odd;
-  }
-
-  /**
-   * @brief Compound assignment sum operator modulo `2`.
-   *
-   * @param rhs
-   * @return Z&
-   */
-  constexpr Z& operator+=(const Z& rhs) noexcept {
-    odd = rhs.odd ? !odd : odd;
-    return *this;
-  }
-  /**
-   * @brief Compound assignment difference operator modulo `2`.
-   *
-   * @param rhs
-   * @return Z&
-   */
-  constexpr Z& operator-=(const Z& rhs) noexcept {
-    odd = rhs.odd ? !odd : odd;
-    return *this;
-  }
-  /**
-   * @brief Compound assignment product operator modulo `2`.
-   *
-   * @param rhs
-   * @return Z&
-   */
-  constexpr Z& operator*=(const Z& rhs) noexcept {
-    odd = rhs.odd ? odd : false;
-    return *this;
-  }
-
-  /**
-   * @brief Invert the element in `Z`. Throws `std::domain_error` if the element
-   * is zero.
-   *
-   * @return Z
-   */
-  [[nodiscard]] Z invert() const {
-    if (odd) {
-      return *this;
-    }
-    throw std::domain_error(
-        "Attempted to invert a ring element that is not a unit."
-    );
+    return Z(modulus, nmod_inv(value, modulus));
   }
 };
 

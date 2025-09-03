@@ -15,11 +15,6 @@
 
 namespace chomp::core {
 
-TEST_CASE("BinaryRing concept on Z", "[algebra]") {
-  CHECK(BinaryRing<Z<2>>);
-  CHECK_FALSE(BinaryRing<Z<3>>);
-}
-
 TEST_CASE("Ring identify functions work correctly", "[algebra]") {
   CHECK(zero<Z<13>>().rep() == 0);
   CHECK(zero<Z<2>>().rep() == 0);

@@ -21,7 +21,6 @@ TEST_CASE("Fundamental types and algebraic concepts", "[algebra]") {
   CHECK(Ring<float>);
   CHECK_FALSE(Ring<void>);
   CHECK(Ring<char>);
-  CHECK_FALSE(BinaryRing<char>);
 }
 
 TEST_CASE("Identity functions on fundamental types.", "[algebra]") {
