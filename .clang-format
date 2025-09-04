@@ -31,7 +31,7 @@ IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^.*chomp.*'
     Priority: 1
-  - Regex: '^.*(catch2)|(flint).*'
+  - Regex: '^.*(catch2)|(eigen3)|(flint).*'
     Priority: 2
   - Regex: '^.*'
     Priority: 3
